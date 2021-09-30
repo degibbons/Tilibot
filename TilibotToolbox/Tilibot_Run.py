@@ -1,0 +1,131 @@
+## Tilibot Run
+
+import os
+import numpy as np
+import time
+import pandas as pd
+from Tilibot_Constants import *
+from Tilibot_Functions import *
+from Tilibot_Classes import *
+from dynamixel_sdk import *
+from threading import Thread
+
+if os.name == 'nt': # nt for windows, posix for mac and linux
+    import msvcrt
+    def getch():
+        return msvcrt.getch().decode()
+else:
+    import sys, tty, termios
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    def getch():
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+config_array = read_config_file("Tilibot_Configuration_File.yml")
+[invalidate_value, confirmed_action] = check_config_file(config_array)
+record_array = RecordPreferences(config_array)
+stride_numbers = (config_array[4], config_array[2]) # Stride amount and positions per stride
+
+if invalidate_value == True:
+    print("Shutting Down Tilibot...")
+    exit()
+
+if config_array[29] == True:
+    DigitalSetup(config_array)
+elif config_array[29] == False:
+    [portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler] = Packet_Port_Setup(config_array)
+    port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4]
+else:
+    print("Error in run option. Please fix and try again.")
+
+preprocessed_positions = ReadServoAngles(config_array[1])
+print("Angle .CSV data read.")
+PositionsMatrix = PostProcessPositions(preprocessed_positions)
+print("Positions Matrix Created.")
+SpeedMatrix = DetermineSpeeds(config_array[3],PositionsMatrix)
+print("Speeds Calculated.")
+
+Obj_list = []
+
+ServosDictionary = Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix)
+Obj_list.append(ServosDictionary)
+
+if any(config_array[6]):
+    LimbDictionary = Create_DigitalLimbs(config_array,ServosDictionary)
+    Obj_list.append(LimbDictionary)
+
+if config_array[7] == True:
+    TilibotBody = Create_DigitalBody(LimbDictionary)
+    Obj_list.append(TilibotBody)
+
+if confirmed_action[0] == 1:
+    TilibotBody.InitialSetup()
+    TilibotBody.ToggleTorque(1)
+    TilibotBody.MoveSpineHome(config_array[17])
+    TilibotBody.MoveLegsHome()
+    print("Tilibot Body has been moved to Home Position.")
+    print("Please press enter when you are ready to begin.")
+    getch()
+    out_data = TilibotBody.ContinuousLegsMove(stride_numbers, record_array)
+    if record_array[0] == True:
+        Write_Doc(config_array,out_data)
+elif confirmed_action[0] == 2:
+    limb_to_move = LimbDictionary[confirmed_action[1]]
+    limb_to_move.InitialSetup()
+    limb_to_move.ToggleTorque(1)
+    limb_to_move.MoveHome(config_array[17])
+    print("Limb has been moved to Home Position.")
+    print("Please press enter when you are ready to begin.")
+    getch()
+    start_time = time.time()
+    out_data = limb_to_move.ContinuousMove(port_hand_list,packetHandler,stride_numbers, record_array, start_time)
+    if record_array[0] == True:
+        Write_Doc(config_array,out_data)
+elif confirmed_action[0] == 3:
+    for each_limb in confirmed_action[1]:
+        LimbDictionary[each_limb].InitialSetup()
+        LimbDictionary[each_limb].ToggleTorque(1)
+        LimbDictionary[each_limb].MoveHome(config_array[17])
+    print("Limb has been moved to Home Position.")
+    print("Please press enter when you are ready to begin.")
+    getch()
+    start_time = time.time()
+    out_data = MoveNumerousLimbs(confirmed_action[1],LimbDictionary,ServosDictionary,port_hand_list,packetHandler,stride_numbers,record_array,start_time)
+    if record_array[0] == True:
+        Write_Doc(config_array,out_data)
+elif confirmed_action[0] == 4:
+    servo_to_move = ServosDictionary[confirmed_action[1]]
+    servo_to_move.InitialSetup(port_hand_list[CorrectPortHandler(servo_to_move.ID)])
+    servo_to_move.ToggleTorque(1,port_hand_list[CorrectPortHandler(servo_to_move.ID)])
+    servo_to_move.MoveHome(config_array[17])
+    print("Servo has been moved to Home Position.")
+    print("Please press enter when you are ready to begin.")
+    getch()
+    start_time = time.time()
+    out_data = servo_to_move.ContinuousMove(port_hand_list[CorrectPortHandler(servo_to_move.ID)], stride_numbers, record_array, start_time)
+    if record_array[0] == True:
+        Write_Doc(config_array,out_data)
+elif confirmed_action[0] == 5:
+    for each_servo in confirmed_action[1]:
+        ServosDictionary[each_servo].InitialSetup(port_hand_list[CorrectPortHandler(each_servo)])
+        ServosDictionary[each_servo].ToggleTorque(1,port_hand_list[CorrectPortHandler(each_servo)])
+        ServosDictionary[each_servo].MoveHome(config_array[17])
+    print("Servos have been moved to Home Position.")
+    print("Please press enter when you are ready to begin.")
+    getch()
+    start_time = time.time()
+    out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,packetHandler,stride_numbers,record_array, start_time)
+    if record_array[0] == True:
+        Write_Doc(config_array,out_data)
+
+print("Shutting down Tilibot. Please press enter.")
+getch()
+
+
+CleanUp(Obj_list,port_hand_list,packetHandler)
+ShutDown()
