@@ -66,8 +66,10 @@ if config_array[7] == True:
 if confirmed_action[0] == 1:
     TilibotBody.InitialSetup()
     TilibotBody.ToggleTorque(1)
-    TilibotBody.MoveSpineHome(config_array[17])
-    TilibotBody.MoveLegsHome()
+    speed_list = TilibotBody.DetermineVelocities(-1,config_array[17])
+    TilibotBody.SetLimbVelocity(speed_list,port_hand_list,packet_handler)
+    TilibotBody.MoveSpineHome(config_array[17],port_hand_list,packet_handler)
+    TilibotBody.MoveLegsHome(config_array[17],port_hand_list,packet_handler)
     print("Tilibot Body has been moved to Home Position.")
     print("Please press enter when you are ready to begin.")
     getch()

@@ -389,7 +389,6 @@ class Servo:
 class Limb:
     def __init__(self,limbnum,servo_dict):
         self.LimbNumber = limbnum
-
         self.ServoDict = servo_dict
     
     def InitialSetup(self,port_hand_list):
@@ -642,7 +641,7 @@ class Neck(Limb):
         super().__init__(limbnum,servolist)
 
     def StayStraight(self,port_handler,packet_handler):
-
+            
         return
 
     def __del__(self):
@@ -674,19 +673,7 @@ class Body:
     def __init__(self,LimbDictionary,ServoDictionary): #limbs should be a list
         self.LimbDict = LimbDictionary
         self.ServoDict = ServoDictionary
-
-        self.GoalVelocity_FR = []
-        self.GoalPosition_FR = []
-        self.GoalVelocity_FL = []
-        self.GoalPosition_FL = []
-        self.GoalVelocity_BR = []
-        self.GoalPosition_BR = []
-        self.GoalVelocity_BL = []
-        self.GoalPosition_BL = []
-        self.isHome = False
-        self.HomeSpeed = HOME_SPEED
-        self.StrideCount = 1
-
+        
     def InitialSetup(self,port_hand_list):
         for each_servo, each_servo_obj in self.ServoDict.items():
             each_servo_obj.InitialSetup(port_hand_list[CorrectPortHandler(each_servo)])
@@ -697,242 +684,154 @@ class Body:
         for each_servo, each_servo_obj in self.ServoDict.items():
             each_servo_obj.ToggleTorque(OnOrOff,port_hand_list[CorrectPortHandler(each_servo)])
         return
-        return
 
-    def ToggleTorque():
-
-        return
-
-    def MoveLegs(self,IndexIn,portHandler1,portHandler2,packetHandler,isHomeMovement):
-         # Initialize GroupSyncWrite instance
-        groupSyncWritePOS_Front = GroupSyncWrite(portHandler1, packetHandler, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION)
-        # Initialize GroupSyncWrite instance
-        groupSyncWriteVEL_Front = GroupSyncWrite(portHandler1, packetHandler, ADDR_PROFILE_VELOCITY, LEN_VELOCITY_LIMIT)
-        # Initialize GroupSyncWrite instance
-        groupSyncWritePOS_Back = GroupSyncWrite(portHandler2, packetHandler, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION)
-        # Initialize GroupSyncWrite instance
-        groupSyncWriteVEL_Back = GroupSyncWrite(portHandler2, packetHandler, ADDR_PROFILE_VELOCITY, LEN_VELOCITY_LIMIT)
-
-        self.GoalVelocity_FR = []
-        self.GoalPosition_FR = []
-        self.GoalVelocity_FL = []
-        self.GoalPosition_FL = []
-        self.GoalVelocity_BR = []
-        self.GoalPosition_BR = []
-        self.GoalVelocity_BL = []
-        self.GoalPosition_BL = []
-        P_IndexIn = IndexIn
-        
-        if (IndexIn == 0):
-            S_IndexIn = 21
+    def DetermineVelocities(self,speed_index,home_speed=50): # 50 for default home speed may be changed
+        speed_list = []
+        if speed_index == -1:
+            for _ in self.ServoDict:
+                speed_list.append(home_speed)
         else:
-            S_IndexIn = IndexIn-1
+            for servo_obj in self.ServoDict.values():
+                speed_list.append(servo_obj.Speeds[speed_index])
+        return speed_list
 
-        for limbX in self.limbs:
-            if (limbX.LimbNumber == 1):
-                for servoX in limbX.ServoList:
-                    self.GoalVelocity_FR.append(FormatSendData(int(servoX.Speeds[S_IndexIn])))
-                    self.GoalPosition_FR.append(FormatSendData(servoX.Positions[P_IndexIn]))
-            elif(limbX.LimbNumber == 2):
-                for servoX in limbX.ServoList:
-                    self.GoalVelocity_FL.append(FormatSendData(int(servoX.Speeds[S_IndexIn])))
-                    self.GoalPosition_FL.append(FormatSendData(servoX.Positions[P_IndexIn]))
-            elif (limbX.LimbNumber == 3):
-                for servoX in limbX.ServoList:
-                    self.GoalVelocity_BR.append(FormatSendData(int(servoX.Speeds[S_IndexIn])))
-                    self.GoalPosition_BR.append(FormatSendData(servoX.Positions[P_IndexIn]))
-            elif (limbX.LimbNumber == 4):
-                for servoX in limbX.ServoList:
-                    self.GoalVelocity_BL.append(FormatSendData(int(servoX.Speeds[S_IndexIn])))
-                    self.GoalPosition_BL.append(FormatSendData(servoX.Positions[P_IndexIn]))
+    def SetLimbVelocity(self,speed_list,port_hand_list,packet_handler):
+
+        # Initialize GroupSyncWrite instances
+        groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packet_handler, AddrDict[36], 4)
+        groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packet_handler, AddrDict[36], 4)
+        groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packet_handler, AddrDict[36], 4)
+
+        GoalVelocity = []
+        for count,servo_obj in enumerate(self.ServoDict.values()):
+            GoalVelocity.append(FormatSendData(int(speed_list[count])))
+            if servo_obj.ID in FRONT_ARMS:
+                dxl_addparam_result = groupSyncWriteVEL_1.addParam(servo_obj.ID,GoalVelocity[count])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam failed" % servo_obj.ID)
+                    return
+            elif servo_obj.ID in BACK_ARMS:
+                dxl_addparam_result = groupSyncWriteVEL_2.addParam(servo_obj.ID,GoalVelocity[count])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam failed" % servo_obj.ID)
+                    return
+            elif servo_obj.ID in BODY_LENGTH:
+                dxl_addparam_result = groupSyncWriteVEL_3.addParam(servo_obj.ID,GoalVelocity[count])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam failed" % servo_obj.ID)
+                    return
             else:
-                pass
+                print("Error, servo ID does not match existing limb. Please fix and try again.")
+            
+        # Syncwrite goal velocity
+        dxl_comm_result = groupSyncWriteVEL_1.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+        dxl_comm_result = groupSyncWriteVEL_2.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+        dxl_comm_result = groupSyncWriteVEL_3.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
 
-        index = 0
-        for limbX in self.limbs:
-            if (limbX.LimbNumber == 1): 
-                for servoX in limbX.ServoList:
-                    FormattedVel = self.GoalVelocity_FR[index]
-                    if isHomeMovement == True:
-                        FormattedVel = FormatSendData(self.HomeSpeed)
-                    dxl_addparam_result = groupSyncWriteVEL_Front.addParam(servoX.ID,FormattedVel)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-                    FormattedPos = self.GoalPosition_FR[index]
-                    dxl_addparam_result = groupSyncWritePOS_Front.addParam(servoX.ID,FormattedPos)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-            elif (limbX.LimbNumber == 2):
-                for servoX in limbX.ServoList:
-                    FormattedVel = self.GoalVelocity_FL[index]
-                    if isHomeMovement == True:
-                        FormattedVel = FormatSendData(self.HomeSpeed)
-                    dxl_addparam_result = groupSyncWriteVEL_Front.addParam(servoX.ID,FormattedVel)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-                    FormattedPos = self.GoalPosition_FL[index]
-                    dxl_addparam_result = groupSyncWritePOS_Front.addParam(servoX.ID,FormattedPos)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-            elif (limbX.LimbNumber == 3):
-                for servoX in limbX.ServoList:
-                    FormattedVel = self.GoalVelocity_BR[index]
-                    if isHomeMovement == True:
-                        FormattedVel = FormatSendData(self.HomeSpeed)
-                    dxl_addparam_result = groupSyncWriteVEL_Back.addParam(servoX.ID,FormattedVel)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-                    FormattedPos = self.GoalPosition_BR[index]
-                    dxl_addparam_result = groupSyncWritePOS_Back.addParam(servoX.ID,FormattedPos)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-            elif (limbX.LimbNumber == 4):
-                for servoX in limbX.ServoList:
-                    FormattedVel = self.GoalVelocity_BL[index]
-                    if isHomeMovement == True:
-                        FormattedVel = FormatSendData(self.HomeSpeed)
-                    dxl_addparam_result = groupSyncWriteVEL_Back.addParam(servoX.ID,FormattedVel)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-                    FormattedPos = self.GoalPosition_BL[index]
-                    dxl_addparam_result = groupSyncWritePOS_Back.addParam(servoX.ID,FormattedPos)
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam failed" % servoX.ID)
-                        return
-            else:
-                pass
-            index += 1
-
-            # Syncwrite goal velocity
-            dxl_comm_result = groupSyncWriteVEL_Front.txPacket()
-            if dxl_comm_result != COMM_SUCCESS:
-                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-
-            # Syncwrite goal velocity
-            dxl_comm_result = groupSyncWriteVEL_Back.txPacket()
-            if dxl_comm_result != COMM_SUCCESS:
-                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-
-            # Clear syncwrite parameter storage
-            groupSyncWriteVEL_Front.clearParam()
-
-            groupSyncWriteVEL_Back.clearParam()
-
-            # Syncwrite goal position
-            dxl_comm_result = groupSyncWritePOS_Front.txPacket()
-            if dxl_comm_result != COMM_SUCCESS:
-                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-
-            # Syncwrite goal position
-            dxl_comm_result = groupSyncWritePOS_Back.txPacket()
-            if dxl_comm_result != COMM_SUCCESS:
-                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))            
-
-            # Clear syncwrite parameter storage
-            groupSyncWritePOS_Front.clearParam()
-
-            groupSyncWritePOS_Back.clearParam()
-
-
-    def MoveLegsHome(self,portHandler1,portHandler2,packetHandler):
-        self.MoveLegs(0,portHandler1,portHandler2,packetHandler,True)
-        self.IsHome = True
-        for count,limbX in enumerate(LegLimbs):
-            print("Moving Limb #{sn} ({nm}) Home. ".format(sn=limbX,nm=LimbNames[LegLimbs[count]]))
-
-    def MoveSpineHome(self,portHandler3,packetHandler):
-        self.limbs[4].MoveHome(portHandler3,packetHandler)
-        self.limbs[5].MoveHome(portHandler3,packetHandler)
-        self.limbs[6].MoveHome(portHandler3,packetHandler)
-        self.IsHome = True
-        for count,limbX in enumerate(MainBodyLimbs):
-            print("Moving Limb #{sn} ({nm}) Home. ".format(sn=limbX,nm=LimbNames[MainBodyLimbs[count]]))
+        # Clear syncwrite parameter storage
+        groupSyncWriteVEL_1.clearParam()
+        groupSyncWriteVEL_2.clearParam()
+        groupSyncWriteVEL_3.clearParam()
         return
 
-    def ContinuousLegsMove(self,portHandler1,portHandler2,packetHandler):
-        global stopVal
-        # Initialize GroupSyncRead instace for Present Position
-        groupSyncReadMOV_Fr = GroupSyncRead(portHandler1, packetHandler, ADDR_MOVING, LEN_MOVING)
-        groupSyncReadMOV_Ba = GroupSyncRead(portHandler2, packetHandler, ADDR_MOVING, LEN_MOVING)
-        #index = [1] * len(self.limbs)
-        index = 1
-        #innerIndex = 0
-        with open('SpeedPosMatching.csv', 'a', newline='') as csvfile:
-            DocWriter = csv.writer(csvfile, delimiter=',',quoting=csv.QUOTE_MINIMAL)
-            for x in range(0,51):
-                self.MoveLegs(index,portHandler1,portHandler2,packetHandler,False)
-                if (index == 0):
-                    S_IndexIn = 21
-                else:
-                    S_IndexIn = index-1
-                if (stopVal == 1):
-                    print("\nFinishing All Movement.\n")
-                    return
-                P_IndexIn = index
-                PositionList = []
-                SpeedList = []
-                for limbX in self.limbs[0:4]:
-                    for b in limbX.ServoList:
-                        Pos_num = b.Positions[P_IndexIn]
-                        Sp_num = int(b.Speeds[S_IndexIn])
-                        PositionList.append(Pos_num)
-                        SpeedList.append(Sp_num)
-                    CombinedList = list(zip(PositionList,SpeedList))
-                for limbX in self.limbs[0:4]:
-                    print("-------------------------")
-                    print("Index Movement for limb {lnum} is: {ind}".format(ind = index, lnum = limbX.LimbNumber))
-                    print("-------------------------")
-                index += 1
-                if (index > 21): 
-                    index = 0
-                elif (index == 1):
-                    print("==================================================")
-                    print("Stride Number: {sn}".format(sn=self.StrideCount))
-                    print("==================================================")
-                    limbX.StrideCount += 1
-                isStopped = [0] * 16
-                for count,limbX in enumerate(self.limbs[0:4]):
-                    if (count == 0 or count == 1):
-                        for i in limbX.IDList:
-                            groupSyncReadMOV_Fr.addParam(i)
-                    elif (count == 2 or count == 3):
-                        for i in limbX.IDList:
-                            groupSyncReadMOV_Ba.addParam(i)
-                while 1:
-                    # Syncread Moving Value
-                    dxl_comm_result_Fr = groupSyncReadMOV_Fr.txRxPacket()
-                    dxl_comm_result_Ba = groupSyncReadMOV_Ba.txRxPacket()
-                    if dxl_comm_result_Fr != COMM_SUCCESS:
-                        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    if dxl_comm_result_Ba != COMM_SUCCESS:
-                        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    
-                    if (stopVal == 1):
-                        print("\nFinishing All Movement.\n")
+    def MoveLegs(self,position_index,port_hand_list,packet_handler):
+        # Initialize GroupSyncWrite instance
+        groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packet_handler, AddrDict[37], 4)
+        # Initialize GroupSyncWrite instance
+        groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packet_handler, AddrDict[37], 4)
+        
+        
+        GoalPosition_1 = []
+        GoalPosition_2 = []
+        
+        for servo_obj in self.ServoDict.values(): # Dictionaries ordered in Python 3.6 and later, so viable. Sorted by order of item insertion in Python 3.7 and later
+            if servo_obj.ID in FRONT_ARMS:
+                GoalPosition_1.append(FormatSendData(servo_obj.Positions[position_index]))
+                dxl_addparam_result = groupSyncWritePOS_1.addParam(servo_obj.ID,GoalPosition_1[-1])
+                if dxl_addparam_result != True:
+                        print("[ID:%03d] groupSyncWrite addparam velocity failed" % servo_obj.ID)
+                        return
+            elif servo_obj.ID in BACK_ARMS:
+                GoalPosition_2.append(FormatSendData(servo_obj.Positions[position_index]))
+                dxl_addparam_result = groupSyncWritePOS_2.addParam(servo_obj.ID,GoalPosition_2[-1])
+                if dxl_addparam_result != True:
+                        print("[ID:%03d] groupSyncWrite addparam velocity failed" % servo_obj.ID)
                         return
 
-                    for count,i in enumerate(list(range(1,17))):
-                        if (i >= 1 and i <= 8):
-                            dxl_mov = groupSyncReadMOV_Fr.getData(i, ADDR_MOVING, LEN_MOVING)
-                        elif (i > 8 and i <= 16):
-                            dxl_mov = groupSyncReadMOV_Ba.getData(i, ADDR_MOVING, LEN_MOVING)
-                        if (dxl_mov == 0) and (isStopped[count] == 0):
-                            isStopped[count] = 1
-                    exist_count = isStopped.count(0)
-                    if exist_count > 0:
-                        pass
-                    else:
-                        DocWriter.writerow(CombinedList)
-                        break
-                groupSyncReadMOV_Fr.clearParam()
-                groupSyncReadMOV_Ba.clearParam()
+        # Syncwrite goal position
+        dxl_comm_result = groupSyncWritePOS_1.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+        dxl_comm_result = groupSyncWritePOS_2.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+        
+        # Clear syncwrite parameter storage
+        groupSyncWritePOS_1.clearParam()
+        groupSyncWritePOS_2.clearParam()
+        return
+
+    def MoveSpine(self,position_index,port_hand_list,packet_handler):
+        # Initialize GroupSyncWrite instance
+        groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packet_handler, AddrDict[37], 4)
+
+        GoalPosition_3 = []
+        
+        for servo_obj in self.ServoDict.values(): # Dictionaries ordered in Python 3.6 and later, so viable. Sorted by order of item insertion in Python 3.7 and later
+            if servo_obj.ID in BODY_LENGTH:
+                if position_index == -1:
+                    # Orient Spine straight
+                    GoalPosition_3.append(FormatSendData(2048))
+                    dxl_addparam_result = groupSyncWritePOS_3.addParam(servo_obj.ID,GoalPosition_3[-1])
+                    if dxl_addparam_result != True:
+                            print("[ID:%03d] groupSyncWrite addparam velocity failed" % servo_obj.ID)
+                            return
+                else: 
+                    # Orient Spine at a home position
+                    GoalPosition_3.append(FormatSendData(servo_obj.Positions[position_index]))
+                    dxl_addparam_result = groupSyncWritePOS_3.addParam(servo_obj.ID,GoalPosition_3[-1])
+                    if dxl_addparam_result != True:
+                            print("[ID:%03d] groupSyncWrite addparam velocity failed" % servo_obj.ID)
+                            return
+
+        # Syncwrite goal position
+        dxl_comm_result = groupSyncWritePOS_3.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+
+        groupSyncWritePOS_3.clearParam()    
+        return
+
+    def MoveLegsHome(self,home_speed,port_hand_list,packet_handler):
+        self.MoveLegs(0,port_hand_list,packet_handler)
+        print("All limbs Moved to Home Position\n")
+
+    def MoveSpineHome(self,home_speed,port_hand_list,packet_handler):
+        self.MoveSpine(-1,port_hand_list,packet_handler)
+        print("All Spine servos have been moved to Home Position")
+        return
+
+    def ContinuousLegsMove(self,port_hand_list,packet_handler,stride_numbers, record_array, start_time):
+        out_data = []
+        # Initialize GroupSyncRead instace for Moving designation
+        groupSyncRead_Moving = GroupSyncRead(port_handler,packet_handler,AddrDict[39],1)
+        readers_exist = False
+        for stride_count in range(stride_numbers[0]):
+            for position_index in range(stride_numbers[1]):
+                isStopped = [0] * 16
+                if (stride_count == 0) and (position_index == 0): # Skip the first position, this is Home Position
+                    continue
+                if (position_index == 0):
+                    speed_index = stride_numbers[1] - 1
+                else:
+                    speed_index = position_index - 1
+        return
 
     def __del__(self):
             pass
