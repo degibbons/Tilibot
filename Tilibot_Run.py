@@ -8,7 +8,7 @@ from Tilibot_Constants import *
 from Tilibot_Functions import *
 from Tilibot_Classes import *
 from dynamixel_sdk import *
-from threading import Thread
+# from threading import Thread
 
 if os.name == 'nt': # nt for windows, posix for mac and linux
     import msvcrt

@@ -157,7 +157,7 @@ class Servo:
                         # Record Speed / self.Speeds[stride_count]
                     if record_array[3] == True:
                         record_time = time.time()
-                        end_time = record_time = start_time
+                        end_time = record_time - start_time
                         servo_data_array.append(end_time)
                         # Record Time / record_time - start_time
                     if record_array[4] == True:
@@ -199,186 +199,6 @@ class Servo:
                 else:
                     pass
         return out_data
-
-    def RebootServo(self,portHandler,packetHandler):
-        import os
-
-        if os.name == 'nt':
-            import msvcrt
-            def getch():
-                return msvcrt.getch().decode()
-        else:
-            import sys, tty, termios # pylint: disable=import-error
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            def getch():
-                try:
-                    tty.setraw(sys.stdin.fileno())
-                    ch = sys.stdin.read(1)
-                finally:
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                return ch
-
-        # # Open port
-        # if portHandler.openPort():
-        #     print("Succeeded to open the port")
-        # else:
-        #     print("Failed to open the port")
-        #     print("Press any key to terminate...")
-        #     getch()
-        #     return
-
-        # # Set port baudrate
-        # if portHandler.setBaudRate(BAUDRATE):
-        #     print("Succeeded to change the baudrate")
-        # else:
-        #     print("Failed to change the baudrate")
-        #     print("Press any key to terminate...")
-        #     getch()
-        #     return
-
-        # # Trigger
-        # print("Press any key to reboot")
-        # getch()
-
-        print("See the Dynamixel LED flickering")
-        # Try reboot
-        # Dynamixel LED will flicker while it reboots
-        dxl_comm_result, dxl_error = packetHandler.reboot(portHandler, self.ID)
-        if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-        elif dxl_error != 0:
-            print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-        print("[ID:%03d] reboot Succeeded\n" % self.ID)
-
-
-        # Close port
-        #portHandler.closePort()
-
-    def ResetServo(self,portHandler):
-        #resets settings of Dynamixel to default values. The Factoryreset function has three operation modes:
-        #0xFF : reset all values (ID to 1, baudrate to 57600)
-        #0x01 : reset all values except ID (baudrate to 57600)
-        #0x02 : reset all values except ID and baudrate.
-
-        import os, sys
-
-        if os.name == 'nt':
-            import msvcrt
-            def getch():
-                return msvcrt.getch().decode()
-        else:
-            import tty, termios # pylint: disable=import-error
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            tty.setraw(sys.stdin.fileno())
-            def getch():
-                return sys.stdin.read(1)
-
-        os.sys.path.append('../dynamixel_functions_py')             # Path setting
-
-                           # Uses DYNAMIXEL SDK library
-
-        # Initialize PortHandler Structs
-        # Set the port path
-        # Get methods and members of PortHandlerLinux or PortHandlerWindows
-        port_num = dynamixel.portHandler(DEVICENAME_1)
-
-        # Initialize PacketHandler Structs
-        dynamixel.packetHandler()
-
-        dxl_comm_result = COMM_TX_FAIL                              # Communication result
-
-        dxl_error = 0                                               # Dynamixel error
-        dxl_baudnum_read = 0                                        # Read baudnum
-
-        # Open port
-        if dynamixel.openPort(port_num):
-            print("Succeeded to open the port!")
-        else:
-            print("Failed to open the port!")
-            print("Press any key to terminate...")
-            getch()
-            return
-
-        # Set port baudrate
-        if dynamixel.setBaudRate(port_num, BAUDRATE):
-            print("Succeeded to change the baudrate!")
-        else:
-            print("Failed to change the baudrate!")
-            print("Press any key to terminate...")
-            getch()
-            return
-
-        # Read present baudrate of the controller
-        print("Now the controller baudrate is : %d" % (dynamixel.getBaudRate(port_num)))
-
-        # Try factoryreset
-        print("[ID:%03d] Try factoryreset : " % (self.ID))
-        dynamixel.factoryReset(port_num, PROTOCOL_VERSION, self.ID, OPERATION_MODE)
-        if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-            print("Aborted")
-            dynamixel.printTxRxResult(PROTOCOL_VERSION, dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION))
-            return
-        elif dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-            dynamixel.printRxPacketError(PROTOCOL_VERSION, dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION))
-
-
-        # Wait for reset
-        print("Wait for reset...")
-        time.sleep(2)
-
-        print("[ID:%03d] factoryReset Success!" % (self.ID))
-
-        # Set controller baudrate to dxl default baudrate
-        if dynamixel.setBaudRate(port_num, FACTORYRST_DEFAULTBAUDRATE):
-            print("Succeed to change the controller baudrate to : %d" % (FACTORYRST_DEFAULTBAUDRATE))
-        else:
-            print("Failed to change the controller baudrate")
-            getch()
-            return
-
-        # Read Dynamixel baudnum
-        dxl_baudnum_read = dynamixel.read1ByteTxRx(port_num, PROTOCOL_VERSION, self.ID, ADDR_PRO_BAUDRATE)
-        if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-            dynamixel.printTxRxResult(PROTOCOL_VERSION, dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION))
-        elif dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-            dynamixel.printRxPacketError(PROTOCOL_VERSION, dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION))
-        else:
-          print("[ID:%03d] Dynamixel baudnum is now : %d" % (self.ID, dxl_baudnum_read))
-
-        # Write new baudnum
-        dynamixel.write1ByteTxRx(port_num, PROTOCOL_VERSION, self.ID, ADDR_PRO_BAUDRATE, NEW_BAUDNUM)
-        if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-            dynamixel.printTxRxResult(PROTOCOL_VERSION, dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION))
-        elif dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-            dynamixel.printRxPacketError(PROTOCOL_VERSION, dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION))
-        else:
-          print("[ID:%03d] Set Dynamixel baudnum to : %d" % (self.ID, NEW_BAUDNUM))
-
-        # Set port baudrate to BAUDRATE
-        if dynamixel.setBaudRate(port_num, BAUDRATE):
-            print("Succeed to change the controller baudrate to : %d" % (BAUDRATE))
-        else:
-            print("Failed to change the controller baudrate")
-            getch()
-            return
-
-        time.sleep(0.2)
-
-        # Read Dynamixel baudnum
-        dxl_baudnum_read = dynamixel.read1ByteTxRx(port_num, PROTOCOL_VERSION, self.ID, ADDR_PRO_BAUDRATE)
-        if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-            dynamixel.printTxRxResult(PROTOCOL_VERSION, dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION))
-        elif dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-            dynamixel.printRxPacketError(PROTOCOL_VERSION, dynamixel.getLastRxPacketError(port_num, PROTOCOL_VERSION))
-        else:
-          print("[ID:%03d] Dynamixel baudnum is now : %d" % (self.ID, dxl_baudnum_read))
-
-
-        # Close port
-        dynamixel.closePort(port_num)
 
     def CleanUp(self):
         pass
@@ -611,7 +431,7 @@ class Leg(Limb):
                                         # Record Speed / self.Speeds[stride_count]
                                     if record_array[3] == True:
                                         record_time = time.time()
-                                        end_time = record_time = start_time
+                                        end_time = record_time - start_time
                                         servo_data_array.append(end_time)
                                         # Record Time / record_time - start_time
                                     if record_array[4] == True:
@@ -820,18 +640,324 @@ class Body:
     def ContinuousLegsMove(self,port_hand_list,packet_handler,stride_numbers, record_array, start_time):
         out_data = []
         # Initialize GroupSyncRead instace for Moving designation
-        groupSyncRead_Moving = GroupSyncRead(port_handler,packet_handler,AddrDict[39],1)
+        groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[39],1)
+        groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[39],1)
+        groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[39],1)
         readers_exist = False
         for stride_count in range(stride_numbers[0]):
             for position_index in range(stride_numbers[1]):
-                isStopped = [0] * 16
+                isStopped = [0] * 24
                 if (stride_count == 0) and (position_index == 0): # Skip the first position, this is Home Position
                     continue
                 if (position_index == 0):
                     speed_index = stride_numbers[1] - 1
                 else:
                     speed_index = position_index - 1
-        return
+                speed_list = self.DetermineVelocities(speed_index)
+                self.SetLimbVelocity(speed_list,port_hand_list,packet_handler)
+                self.MoveLegs(position_index,port_hand_list,packet_handler)
+                for each_servo in self.ServoDict.keys():
+                    if each_servo in FRONT_ARMS:
+                        groupSyncRead_Moving_1.addParam(each_servo)
+                    elif each_servo in BACK_ARMS:
+                        groupSyncRead_Moving_2.addParam(each_servo)
+                    elif each_servo in BODY_LENGTH:
+                        groupSyncRead_Moving_3.addParam(each_servo)
+                while 1:
+                    # Syncread Moving Value
+                    dxl_comm_result = groupSyncRead_Moving_1.txRxPacket()
+                    if dxl_comm_result != COMM_SUCCESS:
+                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    dxl_comm_result = groupSyncRead_Moving_2.txRxPacket()
+                    if dxl_comm_result != COMM_SUCCESS:
+                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    dxl_comm_result = groupSyncRead_Moving_3.txRxPacket()
+                    if dxl_comm_result != COMM_SUCCESS:
+                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+
+                    for index,each_servo in enumerate(self.ServoDict.keys()):
+                        # Get Dynamixel present Moving value
+                        if each_servo in FRONT_ARMS:
+                            dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
+                            if (dxl_mov == 0) and (isStopped[index] == 0):
+                                isStopped[index] = 1
+                        if each_servo in BACK_ARMS:
+                            dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
+                            if (dxl_mov == 0) and (isStopped[index] == 0):
+                                isStopped[index] = 1
+                        if each_servo in BODY_LENGTH:
+                            dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
+                            if (dxl_mov == 0) and (isStopped[index] == 0):
+                                isStopped[index] = 1
+                    if (0 in isStopped):
+                        pass
+                    else:
+                        groupSyncRead_Moving_1.clearParam()
+                        groupSyncRead_Moving_2.clearParam()
+                        groupSyncRead_Moving_3.clearParam()
+                        if record_array[0] == True:
+                            if readers_exist == False:
+                                if record_array[6] == True:
+                                    # Create Current Reader
+                                    groupSyncRead_Current_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[42],2)
+                                    port_1_Current = []
+                                    readers_exist = True
+                                if record_array[7] == True:
+                                    # Create Voltage Reader
+                                    groupSyncRead_Voltage_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[47],2)
+                                    port_1_Voltage = []
+                                    readers_exist = True
+                                if record_array[8] == True:
+                                    # Create Temperature Reader
+                                    groupSyncRead_Temperature_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[48],1)
+                                    port_1_Temperature = []
+                                    readers_exist = True
+                                if record_array[6] == True:
+                                    # Create Current Reader
+                                    groupSyncRead_Current_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[42],2)
+                                    port_2_Current = []
+                                    readers_exist = True
+                                if record_array[7] == True:
+                                    # Create Voltage Reader
+                                    groupSyncRead_Voltage_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[47],2)
+                                    port_2_Voltage = []
+                                    readers_exist = True
+                                if record_array[8] == True:
+                                    # Create Temperature Reader
+                                    groupSyncRead_Temperature_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[48],1)
+                                    port_2_Temperature = []
+                                    readers_exist = True
+                                if record_array[6] == True:
+                                    # Create Current Reader
+                                    groupSyncRead_Current_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[42],2)
+                                    port_3_Current = []
+                                    readers_exist = True
+                                if record_array[7] == True:
+                                    # Create Voltage Reader
+                                    groupSyncRead_Voltage_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[47],2)
+                                    port_3_Voltage = []
+                                    readers_exist = True
+                                if record_array[8] == True:
+                                    # Create Temperature Reader
+                                    groupSyncRead_Temperature_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[48],1)
+                                    port_3_Temperature = []
+                                    readers_exist = True
+                            if readers_exist == True:
+                                for each_servo in self.ServoDict.keys():
+                                    if record_array[6] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            groupSyncRead_Current_1.addParam(each_servo)
+                                        if each_servo in BACK_ARMS:
+                                            groupSyncRead_Current_2.addParam(each_servo)
+                                        if each_servo in BODY_LENGTH:
+                                            groupSyncRead_Current_3.addParam(each_servo)
+                                    if record_array[7] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            groupSyncRead_Voltage_1.addParam(each_servo)
+                                        if each_servo in BACK_ARMS:
+                                            groupSyncRead_Voltage_2.addParam(each_servo)
+                                        if each_servo in BODY_LENGTH:
+                                            groupSyncRead_Voltage_3.addParam(each_servo)
+                                    if record_array[8] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            groupSyncRead_Temperature_1.addParam(each_servo)
+                                        if each_servo in BACK_ARMS:
+                                            groupSyncRead_Temperature_2.addParam(each_servo)
+                                        if each_servo in BODY_LENGTH:
+                                            groupSyncRead_Temperature_3.addParam(each_servo)
+                            if readers_exist == True:
+                                if record_array[6] == True:
+                                    # Syncread present current
+                                    dxl_comm_result = groupSyncRead_Current_1.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_front_servo in FRONT_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Current_1.isAvailable(each_front_servo, AddrDict[42], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                            quit()
+                                        # Get Dynamixel present current value
+                                        port_1_Current.append(groupSyncRead_Current_1.getData(each_front_servo, AddrDict[42], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Current_1.clearParam()
+                                    # Syncread present current
+                                    dxl_comm_result = groupSyncRead_Current_2.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_back_servo in BACK_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Current_2.isAvailable(each_back_servo, AddrDict[42], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                            quit()
+                                        # Get Dynamixel present current value
+                                        port_2_Current.append(groupSyncRead_Current_2.getData(each_back_servo, AddrDict[42], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Current_2.clearParam()
+                                    # Syncread present current
+                                    dxl_comm_result = groupSyncRead_Current_3.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_bodyln_servo in BODY_LENGTH:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Current_3.isAvailable(each_servo, AddrDict[42], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present current value
+                                        port_3_Current.append(groupSyncRead_Current_3.getData(each_servo, AddrDict[42], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Current_3.clearParam()
+                                if record_array[7] == True:
+                                    # Syncread present voltage
+                                    dxl_comm_result = groupSyncRead_Voltage_1.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_front_servo in FRONT_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(each_servo, AddrDict[47], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present voltage value
+                                        port_1_Voltage.append(groupSyncRead_Voltage_1.getData(each_servo, AddrDict[47], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Current_1.clearParam()
+                                    # Syncread present voltage
+                                    dxl_comm_result = groupSyncRead_Voltage_2.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_back_servo in BACK_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(each_back_servo, AddrDict[47], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                            quit()
+                                        # Get Dynamixel present voltage value
+                                        port_2_Voltage.append(groupSyncRead_Voltage_2.getData(each_back_servo, AddrDict[47], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Voltage_2.clearParam()
+                                    # Syncread present voltage
+                                    dxl_comm_result = groupSyncRead_Voltage_3.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_bodyln_servo in BODY_LENGTH:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(each_servo, AddrDict[47], 2)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present voltage value
+                                        port_3_Voltage.append(groupSyncRead_Voltage_3.getData(each_servo, AddrDict[47], 2))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Voltage_3.clearParam()
+                                if record_array[8] == True:
+                                    # Syncread present temperature
+                                    dxl_comm_result = groupSyncRead_Temperature_1.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_front_servo in FRONT_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(each_servo, AddrDict[48], 1)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present temperature value
+                                        port_1_Temperature.append(groupSyncRead_Temperature_1.getData(each_servo, AddrDict[48], 1))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Temperature_1.clearParam()
+                                    # Syncread present temperature
+                                    dxl_comm_result = groupSyncRead_Temperature_2.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_back_servo in BACK_ARMS:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(each_servo, AddrDict[48], 1)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present temperature value
+                                        port_2_Temperature.append(groupSyncRead_Temperature_2.getData(each_servo, AddrDict[48], 1))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Temperature_2.clearParam()
+                                    # Syncread present temperature
+                                    dxl_comm_result = groupSyncRead_Temperature_3.txRxPacket()
+                                    if dxl_comm_result != COMM_SUCCESS:
+                                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                    for each_bodyln_servo in BODY_LENGTH:
+                                        # Check if groupsyncread data of Dynamixel is available
+                                        dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(each_servo, AddrDict[48], 1)
+                                        if dxl_getdata_result != True:
+                                            print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                            quit()
+                                        # Get Dynamixel present temperature value
+                                        port_3_Temperature.append(groupSyncRead_Temperature_3.getData(each_servo, AddrDict[48], 1))
+                                    # Clear syncread parameter storage
+                                    groupSyncRead_Temperature_3.clearParam()
+                            if readers_exist == True:
+                                for list_index,each_servo in enumerate(self.ServoDict):
+                                    servo_data_array = [each_servo]
+                                    if record_array[1] == True:
+                                        pos_out = self.ServoDict[each_servo].Positions[position_index]
+                                        servo_data_array.append(pos_out)
+                                        # Record Position / self.Positions[stride_count]
+                                    if record_array[2] == True:
+                                        vel_out = self.ServoDict[each_servo].Speeds[stride_count]
+                                        servo_data_array.append(vel_out)
+                                        # Record Speed / self.Speeds[stride_count]
+                                    if record_array[3] == True:
+                                        record_time = time.time()
+                                        end_time = record_time - start_time
+                                        servo_data_array.append(end_time)
+                                        # Record Time / record_time - start_time
+                                    if record_array[4] == True:
+                                        pos_count = position_index
+                                        servo_data_array.append(pos_count)
+                                        # Record Position Index / position_count
+                                    if record_array[5] == True:
+                                        strd_count = stride_count
+                                        servo_data_array.append(strd_count)
+                                        # Record Stride Count / stride_count
+                                    if record_array[6] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            dxl_current = port_1_Current[list_index]
+                                        elif each_servo in BACK_ARMS:
+                                            dxl_current = port_2_Current[list_index-8]
+                                        elif each_servo in BODY_LENGTH:
+                                            dxl_current = port_3_Current[list_index-16]
+                                        servo_data_array.append(dxl_current)
+                                    if record_array[7] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            dxl_voltage = port_1_Voltage[list_index]
+                                        elif each_servo in BACK_ARMS:
+                                            dxl_voltage = port_2_Voltage[list_index-8]
+                                        elif each_servo in BODY_LENGTH:
+                                            dxl_voltage = port_3_Voltage[list_index-16]
+                                        servo_data_array.append(dxl_voltage)
+                                    if record_array[8] == True:
+                                        if each_servo in FRONT_ARMS:
+                                            dxl_temp = port_1_Temperature[list_index]
+                                        elif each_servo in BACK_ARMS:
+                                            dxl_temp = port_2_Temperature[list_index-8]
+                                        elif each_servo in BODY_LENGTH:
+                                            dxl_temp = port_3_Temperature[list_index-16]
+                                        servo_data_array.append(dxl_temp)
+                                    out_data.append(servo_data_array)
+                        if record_array[6] == True:
+                            port_1_Current = []
+                            port_2_Current = []
+                            port_3_Current = []
+                        if record_array[7] == True:
+                            port_1_Voltage = []
+                            port_2_Voltage = []
+                            port_3_Voltage = []
+                        if record_array[8] == True:
+                            port_1_Temperature = []
+                            port_2_Temperature = []
+                            port_3_Temperature = []
+                        break
+        return      
 
     def __del__(self):
             pass
