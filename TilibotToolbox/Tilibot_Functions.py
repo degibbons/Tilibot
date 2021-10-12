@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import copy as cp
 import time
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 import math
 import sys
 # import dynamixel_functions as dynamixel  
@@ -291,6 +291,10 @@ def Packet_Port_Setup(config_array):
     # Set the port path
     # Get methods and members of PortHandlerLinux or PortHandlerWindows
     ports_used = [0, 0, 0, 0]
+    portHandler_1 = 0
+    portHandler_2 = 0
+    portHandler_3 = 0
+    portHandler_4 = 0
     if (config_array[7]==True):
         portHandler_1 = PortHandler(DEVICENAME_1)
         # Open port
@@ -879,126 +883,6 @@ def DetermineSpeeds(tspan,PositionsMatrix):
         newSpeeds[j-1][newSpeeds[j-1] == 0] = 1
 
     return newSpeeds
-
-def PingServos(portHandler1,portHandler2,portHandler3,packetHandler):
-    import os
-
-    if os.name == 'nt':
-        import msvcrt
-        def getch():
-            return msvcrt.getch().decode()
-    else:
-        import sys, tty, termios 
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        def getch():
-            try:
-                tty.setraw(sys.stdin.fileno())
-                ch = sys.stdin.read(1)
-            finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            return ch
-    #Initialize PortHandler instance
-    #Set the port path
-    #Get methods and members of PortHandlerLinux or PortHandlerWindows
-    # portHandler1 = PortHandler(DEVICENAME_1)
-    # portHandler2 = PortHandler(DEVICENAME_2)
-    # portHandler3 = PortHandler(DEVICENAME_3)
-
-    # Initialize PacketHandler instance
-    # Set the protocol version
-    # Get methods and members of Protocol1PacketHandler or Protocol2PacketHandler
-    # packetHandler = PacketHandler(PROTOCOL_VERSION)
-
-    # # Open port
-    # if portHandler1.openPort():
-    #     print("Succeeded to open the port")
-    # else:
-    #     print("Failed to open the port")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-
-    # # Set port baudrate
-    # if portHandler1.setBaudRate(BAUDRATE):
-    #     print("Succeeded to change the baudrate")
-    # else:
-    #     print("Failed to change the baudrate")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-    # # Open port
-    # if portHandler2.openPort():
-    #     print("Succeeded to open the port")
-    # else:
-    #     print("Failed to open the port")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-
-    # # Set port baudrate
-    # if portHandler2.setBaudRate(BAUDRATE):
-    #     print("Succeeded to change the baudrate")
-    # else:
-    #     print("Failed to change the baudrate")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-    # # Open port
-    # if portHandler3.openPort():
-    #     print("Succeeded to open the port")
-    # else:
-    #     print("Failed to open the port")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-
-    # # Set port baudrate
-    # if portHandler3.setBaudRate(BAUDRATE):
-    #     print("Succeeded to change the baudrate")
-    # else:
-    #     print("Failed to change the baudrate")
-    #     print("Press any key to terminate...")
-    #     getch()
-    #     return
-
-    # Try to broadcast ping the Dynamixel
-    dxl_data_list_1, dxl_comm_result = packetHandler.broadcastPing(portHandler1)
-    if dxl_comm_result != COMM_SUCCESS:
-        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-        print("Broadcast Issue for Port #1")
-    time.sleep(1)
-    dxl_data_list_2, dxl_comm_result = packetHandler.broadcastPing(portHandler2)
-    if dxl_comm_result != COMM_SUCCESS:
-        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-        print("Broadcast Issue for Port #2")
-    time.sleep(1)
-    dxl_data_list_3, dxl_comm_result = packetHandler.broadcastPing(portHandler3)
-    if dxl_comm_result != COMM_SUCCESS:
-        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-        print("Broadcast Issue for Port #3")
-    time.sleep(1)
-    print("Detected Dynamixel :")
-    for dxl_id in dxl_data_list_1:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_1.get(dxl_id)[0], dxl_data_list_1.get(dxl_id)[1]))
-    for dxl_id in dxl_data_list_2:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_2.get(dxl_id)[0], dxl_data_list_2.get(dxl_id)[1]))
-    for dxl_id in dxl_data_list_3:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_3.get(dxl_id)[0], dxl_data_list_3.get(dxl_id)[1]))
-    # Close port
-    # portHandler1.closePort() 
-    # portHandler2.closePort() 
-    # portHandler3.closePort() 
-    dxl_data_list = {**dxl_data_list_1, **dxl_data_list_2, **dxl_data_list_3}
-    return dxl_data_list
     
 def Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix):
     ServoDictionary = {}
@@ -1515,7 +1399,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, packet_hand
                                     # Record Speed / self.Speeds[stride_count]
                                 if record_array[3] == True:
                                     record_time = time.time()
-                                    end_time = record_time = start_time
+                                    end_time = record_time - start_time
                                     servo_data_array.append(end_time)
                                     # Record Time / record_time - start_time
                                 if record_array[4] == True:
@@ -1969,7 +1853,7 @@ def MoveNumerousLimbs(limb_list,LimbDictionary,ServosDictionary,port_hand_list,p
                                     # Record Speed / self.Speeds[stride_count]
                                 if record_array[3] == True:
                                     record_time = time.time()
-                                    end_time = record_time = start_time
+                                    end_time = record_time - start_time
                                     servo_data_array.append(end_time)
                                     # Record Time / record_time - start_time
                                 if record_array[4] == True:

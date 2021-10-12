@@ -89,9 +89,6 @@ DEVICENAMES = [DEVICENAME_1, DEVICENAME_2, DEVICENAME_3, DEVICENAME_4]
 
 FACTORYRST_DEFAULTBAUDRATE  = 57600                         # Dynamixel baudrate set by factoryreset
 NEW_BAUDNUM                 = 3                             # New baudnum to recover Dynamixel baudrate as it was
-OPERATION_MODE              = 0x02                          # 0xFF : reset all values
-                                                            # 0x01 : reset all values except ID
-                                                            # 0x02 : reset all values except ID and baudrate
 
 COMM_SUCCESS                = 0                             # Communication Success result value
 COMM_TX_FAIL                = -1001                         # Communication Tx Failed
@@ -108,7 +105,6 @@ LEN_PRO_PRESENT_POSITION    = 4
 LEN_VELOCITY_LIMIT          = 4
 LEN_MOVING                  = 1
 
-index = 0
 dxl_goal_position = [DXL_MINIMUM_POSITION_VALUE, DXL_MAXIMUM_POSITION_VALUE]         # Goal position
 
 LimbNames = {1:"Front Right", 2:"Front Left", 3:"Back Right", 4:"Back Left", 5:"Neck", 6:"Spine", 7:"Tail"}
