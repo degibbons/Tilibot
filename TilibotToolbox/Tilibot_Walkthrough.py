@@ -1,2 +1,0 @@
-## Tilibot_Walkthrough
-
