@@ -1,19 +1,11 @@
 ## Tilibot Classes
 
-import os
 from Tilibot_Constants import *
 from Tilibot_Functions import *
-# import yaml
 from dynamixel_sdk import *
-import numpy as np
-import pandas as pd
-import copy as cp
 import time
-# import RPi.GPIO as GPIO
-import math
-import sys
-# import dynamixel_functions as dynamixel  
-import csv
+
+
 
 class Servo:
     def __init__(self,IDnum,Positions,Speeds,MaxMinMov,digital_only=None):

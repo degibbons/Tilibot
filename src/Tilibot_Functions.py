@@ -2,7 +2,6 @@
 
 from Tilibot_Constants import *
 from Tilibot_Classes import Servo, Leg, Neck, Spine, Tail, Body
-# from genericpath import isdir, isfile
 import os
 import yaml
 from dynamixel_sdk import *
@@ -10,10 +9,7 @@ import numpy as np
 import pandas as pd
 import copy as cp
 import time
-# import RPi.GPIO as GPIO
-import math
 import sys
-# import dynamixel_functions as dynamixel  
 import csv
 
 if os.name == 'nt': # nt for windows, posix for mac and linux
