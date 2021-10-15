@@ -33,7 +33,7 @@ For further instructions, please read the Tilibot_Reference.pdf in the Tilibot r
 4. As above, for the Non-Tech Savvy individuals, you may execute instructions 5 and 6, that is:  
    * Change the directory to the src\ folder
    * Run Tilibot_Intro.py
-5. For simplification purposes, you may also run the following:
+5. For simplification purposes, you may also simply run the following:
 > python3 setup.py install
 
 It is highly recommended to run Tilibot_Install.py to check your library dependencies however.
