@@ -105,7 +105,7 @@ def check_config_file(config_array):
             if (not isinstance(a, int)) or (b <= 0):
                 servos_proper_ints = False
     valid_home_speed = True
-    if (not isinstance(config_array[17])):
+    if (not isinstance(config_array[17],int)):
         valid_home_speed = False
     elif (config_array[17] > 1023) or (config_array[17] < 0):
         valid_home_speed = False
@@ -562,7 +562,7 @@ def DataAddrConversion(DesiredData):
         DataAddr = AddrDict[DesiredData]
     else:
         print("That's not a recognized trait selection, please try again!\n")
-    return DataAddr if DataAddr is not -1 else -1
+    return DataAddr if DataAddr != -1 else -1
 
 def FormatSendData(rawData):
     return [DXL_LOBYTE(DXL_LOWORD(rawData)), DXL_HIBYTE(DXL_LOWORD(rawData)), DXL_LOBYTE(DXL_HIWORD(rawData)), DXL_HIBYTE(DXL_HIWORD(rawData))]
