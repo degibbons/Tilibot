@@ -9,4 +9,5 @@ setup(name='Tilibot',
       author_email='danegibbons@gmail.com',
       url='', # Fix
       packages=['distutils', 'distutils.command'], # Fix
+      python_requires='>=3.8'
      )
