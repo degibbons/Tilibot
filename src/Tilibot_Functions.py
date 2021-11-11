@@ -5,14 +5,16 @@ from Tilibot_Classes import Servo, Leg, Neck, Spine, Tail, Body
 import os
 import yaml
 from dynamixel_sdk import *
+from Tilibot_Universal_Functions import *
 import numpy as np
 import pandas as pd
 import copy as cp
 import time
 import sys
 import csv
+import math
 
-if os.name == 'nt': # nt for windows, posix for mac and linux
+if os.name == 'nt': # nt for windows, posix for mac and linux, Defines getch for user control
     import msvcrt
     def getch():
         return msvcrt.getch().decode()
@@ -31,43 +33,43 @@ else:
 
 
 def read_config_file(Config_Yaml_File): # Read the configuration yaml file and export data in an array
-    with open(Config_Yaml_File, "r") as stream:
+    with open(Config_Yaml_File, "r") as stream: # Open configuration file in read mode
         config_data = yaml.safe_load(stream)
-        baudrate = config_data['Baud-Rate']                             #0
-        positions_file = config_data['Position-Angle-File']             #1
-        position_amount = config_data['Positions-Per-Stride']           #2
-        stride_time = config_data["Stride-Time"]                        #3
-        stride_amount = config_data['Stride-Amount']                    #4
-        connected_servos = config_data['Servos-Connected']              #5
-        connected_limbs = config_data['Limbs-Connected']                #6
-        connected_body = config_data['Whole-Body-Connected']            #7
-        move_body_act = config_data['Move-Body']                        #8
-        move_one_limb_act = config_data['Move-Single-Limb']             #9
-        single_limb_to_move = config_data['Single-Limb-To-Move']        #10
-        move_multi_limb_act = config_data['Move-Multiple-Limbs']        #11
-        limbs_to_move = config_data['Limbs-To-Move']                    #12
-        move_one_servo_act = config_data['Move-Single-Servo']           #13
-        single_servo_to_move = config_data['Single-Servo-To-Move']      #14
-        move_multi_servo_act = config_data['Move-Multiple-Servos']      #15
-        servos_to_move = config_data['Servos-To-Move']                  #16
-        home_speed = config_data['Home-Speed']                          #17
-        out_file_name = config_data['Output-File-Name']                 #18
-        out_file_dir = config_data['Output-File-Directory']             #19
-        position_write = config_data['Position']                        #20
-        speed_write = config_data['Speed']                              #21
-        time_write = config_data['Time']                                #22
-        posindex_write = config_data['Position-Index']                  #23
-        stridecount_write = config_data['Stride-Count']                 #24
-        current_write = config_data['Current']                          #25
-        voltage_write = config_data['Voltage']                          #26
-        temp_write = config_data['Temperature']                         #27
-        neck_straight = config_data['Neck-Straight']                    #28
-        spine_straight = config_data['Spine-Straight']                  #29
-        tail_straight = config_data['Tail-Straight']                    #30
-        silence_ext_ouput = config_data['Silence-Extraneous-Output']    #31
-        run_digital_only = config_data['Run-Digital-Only']              #32
+        baudrate = config_data['Baud-Rate']                             #0       Read Baud Rate
+        positions_file = config_data['Position-Angle-File']             #1       Read in the name of the Position Angle File
+        position_amount = config_data['Positions-Per-Stride']           #2       Read the amount of positions present in one whole stride
+        stride_time = config_data["Stride-Time"]                        #3       Read the amount of time 1 stride should take
+        stride_amount = config_data['Stride-Amount']                    #4       Read the amount of desired strides one run should make
+        connected_servos = config_data['Servos-Connected']              #5       Read in as a list which servos are connected
+        connected_limbs = config_data['Limbs-Connected']                #6       Read in as a list which limbs are connected
+        connected_body = config_data['Whole-Body-Connected']            #7       Read in if the entire body is connected or not
+        move_body_act = config_data['Move-Body']                        #8       Read in if the whole body should be moved or not
+        move_one_limb_act = config_data['Move-Single-Limb']             #9       Read in if a single limb should be moved or not
+        single_limb_to_move = config_data['Single-Limb-To-Move']        #10      Read in what limb should be moved if one limb is to be moved
+        move_multi_limb_act = config_data['Move-Multiple-Limbs']        #11      Read in if multiple limbs should be moved or not
+        limbs_to_move = config_data['Limbs-To-Move']                    #12      Read in what limbs should be moved if multiple limbs are to be moved
+        move_one_servo_act = config_data['Move-Single-Servo']           #13      Read in if one servo should be moved or not
+        single_servo_to_move = config_data['Single-Servo-To-Move']      #14      Read in which servo should be moved if one is to be moved
+        move_multi_servo_act = config_data['Move-Multiple-Servos']      #15      Read in if multiple servos should be moved or not
+        servos_to_move = config_data['Servos-To-Move']                  #16      Read in which servos are to be moved if multiple are to be moved
+        home_speed = config_data['Home-Speed']                          #17      Read in home speed
+        out_file_name = config_data['Output-File-Name']                 #18      Read in what the output file name should be if output is desired
+        out_file_dir = config_data['Output-File-Directory']             #19      Read in what the output file directory location should be
+        position_write = config_data['Position']                        #20      Read in if you want "position" to be recorded
+        speed_write = config_data['Speed']                              #21      Read in if you want "speed" to be recorded
+        time_write = config_data['Time']                                #22      Read in if you want "time" to be recorded
+        posindex_write = config_data['Position-Index']                  #23      Read in if you want "position index" to be recorded
+        stridecount_write = config_data['Stride-Count']                 #24      Read in if you want "stride count" to be recorded
+        current_write = config_data['Current']                          #25      Read in if you want "current" to be recorded
+        voltage_write = config_data['Voltage']                          #26      Read in if you want "voltage" to be recorded
+        temp_write = config_data['Temperature']                         #27      Read in if you want "temperature" to be recorded
+        neck_straight = config_data['Neck-Straight']                    #28      Read in if you want to keep the neck straight or move according to instructions
+        spine_straight = config_data['Spine-Straight']                  #29      Read in if you want to keep the spine straight or move according to instructions
+        tail_straight = config_data['Tail-Straight']                    #30      Read in if you want to keep the tail straight or move according to instructions
+        silence_ext_ouput = config_data['Silence-Extraneous-Output']    #31      Read in if you want to silence extraneous outputs
+        run_digital_only = config_data['Run-Digital-Only']              #32      Read in if you want to run this program digitally without a physical body
 
-    config_array = [baudrate, positions_file, position_amount, stride_time, stride_amount, 
+    config_array = [baudrate, positions_file, position_amount, stride_time, stride_amount,                      # Assemble output array of all field options for return
     connected_servos, connected_limbs, connected_body, move_body_act, move_one_limb_act, single_limb_to_move,
     move_multi_limb_act, limbs_to_move, move_one_servo_act, single_servo_to_move, move_multi_servo_act, 
     servos_to_move, home_speed, out_file_name, out_file_dir, position_write, speed_write, time_write, 
@@ -97,11 +99,11 @@ def check_config_file(config_array):
     limbs_proper_ints = True
     servos_proper_ints = True
     if move_limb_number > 0:
-        for a in move_limb_number:
+        for a in config_array[12]:
             if (not isinstance(a, int)) or (a <= 0):
                 limbs_proper_ints = False
     if move_servo_number > 0:
-        for b in move_limb_number:
+        for b in config_array[16]:
             if (not isinstance(a, int)) or (b <= 0):
                 servos_proper_ints = False
     valid_home_speed = True
@@ -113,7 +115,7 @@ def check_config_file(config_array):
     if (not isinstance(config_array[0],int)) or (config_array[0] <= 0):
         print("Baud-Rate input is incorrect format. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[1],str)) or (os.path.isfile(config_array[1])):
+    elif (not isinstance(config_array[1],str)) or (not os.path.isfile(config_array[1])):
         print("Position-Angle-File is not a valid String or is not a valid file. Please fix and try again.")
         invalidate_value = True
     elif (not isinstance(config_array[2],int)) or (config_array[2] <= 0):
@@ -131,8 +133,8 @@ def check_config_file(config_array):
     elif (not isinstance(config_array[6],list)) or (limb_count != 7) or (limb_all_bool == False):
         print("Limbs-Connected . Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[7],int)) or (config_array[7] <= 0):
-        print("Whole-Body-Connected is not a correct list, not 7 in length, or one of the elements is not a Boolean. Please fix and try again.")
+    elif (not isinstance(config_array[7],bool)):
+        print("Whole-Body-Connected is not a Boolean. Please fix and try again.")
         invalidate_value = True
     elif (not isinstance(config_array[8],bool)):
         print("Move-Body is not a valid Boolean. Please fix and try again.")
@@ -140,7 +142,7 @@ def check_config_file(config_array):
     elif (not isinstance(config_array[9],bool)):
         print("Move-Single-Limb is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[10],int)) or (config_array[10] <= 0):
+    elif (not isinstance(config_array[10],int)) or (config_array[10] < 0):
         print("Single-Limb-To-Move is not a valid Integer. Please fix and try again.")
         invalidate_value = True
     elif (not isinstance(config_array[11],bool)):
@@ -152,7 +154,7 @@ def check_config_file(config_array):
     elif (not isinstance(config_array[13],bool)) :
         print("Move-Single-Servo is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[14],int)) or (config_array[14] <= 0):
+    elif (not isinstance(config_array[14],int)) or (config_array[14] < 0):
         print("Single-Servo-To-Move is not a valid Integer. Please fix and try again.")
         invalidate_value = True
     elif (not isinstance(config_array[15],bool)):
@@ -167,7 +169,7 @@ def check_config_file(config_array):
     elif (not isinstance(config_array[18],str)):
         print("Output-File-Name is not a valid String value. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[19],str)) or (os.path.isdir(config_array[19])):
+    elif (not isinstance(config_array[19],str)) or (not os.path.isdir(config_array[19])):
         print("Output-File-Directory is not a valid String or not a valid Directory. Please fix and try again.")
         invalidate_value = True
     elif (not isinstance(config_array[20],int)) or (config_array[20] <= 0):
@@ -533,21 +535,14 @@ def DigitalSetup(config_array):
 
     return
 
-
-def gcd(a, b): 
-    if b == 0: 
-        return a 
-    else: 
-        return gcd(b, a%b) 
-
 def RotatePositionArray(inArray,shiftNum,arrayLength):
-    for i in range(gcd(shiftNum,arrayLength)):  
+    for i in range(math.gcd(arrayLength,shiftNum)):  # Use the juggling algorithm to rotate the position array, using the greatest common divisor
         temp = inArray[i] 
         j = i 
         while 1: 
             k = j + shiftNum 
-            if k >= arrayLength: 
-                k = k - arrayLength 
+            if k >= arrayLength:
+                k = k - arrayLength
             if k == i: 
                 break
             inArray[j] = inArray[k] 
@@ -562,10 +557,7 @@ def DataAddrConversion(DesiredData):
         DataAddr = AddrDict[DesiredData]
     else:
         print("That's not a recognized trait selection, please try again!\n")
-    return DataAddr if DataAddr != -1 else -1
-
-def FormatSendData(rawData):
-    return [DXL_LOBYTE(DXL_LOWORD(rawData)), DXL_HIBYTE(DXL_LOWORD(rawData)), DXL_LOBYTE(DXL_HIWORD(rawData)), DXL_HIBYTE(DXL_HIWORD(rawData))]
+    return DataAddr if DataAddr is not -1 else -1
 
 def ReadServoAngles(positionsFile):
 
@@ -744,7 +736,7 @@ def PostProcessPositions(inPositions):
     ServoPos5 = RotatePositionArray(inPositions[4],9,len(inPositions[4]))
     ServoPos6 = RotatePositionArray(inPositions[5],9,len(inPositions[5]))
     ServoPos7 = RotatePositionArray(inPositions[6],9,len(inPositions[6]))
-    ServoPos8 = RotatePositionArray([7],9,len(inPositions[7]))
+    ServoPos8 = RotatePositionArray(inPositions[7],9,len(inPositions[7]))
 
     ServoPos9 = RotatePositionArray(inPositions[8],8,len(inPositions[8]))
     ServoPos10 = RotatePositionArray(inPositions[9],8,len(inPositions[9]))
@@ -782,10 +774,7 @@ def PostProcessPositions(inPositions):
     ServoPos9, ServoPos10, ServoPos11, ServoPos12, 
     ServoPos13, ServoPos14, ServoPos15, ServoPos16]
 
-def DetermineSpeeds(tspan,PositionsMatrix):
-    #Import position points as a data frame (df)
-    #old_df = pd.read_csv(positionsFile)
-    #old_df = old_df.values[:][:]
+def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride):
     #Make a copy of the dataframe with the same dimensions for the speeds
     speeds = cp.copy(PositionsMatrix)
     h_stance = 4.892994
@@ -802,7 +791,7 @@ def DetermineSpeeds(tspan,PositionsMatrix):
     R_hl = 8 # 80% Approximately
     R_fl = 1 # 10% Approximately
     #Points per Phase
-    pointsPerPhase = 11
+    pointsPerPhase = points_per_stride/2
     speeds = np.array(speeds)
     b = speeds.shape
     cLength = int(b[1]/2)
@@ -958,26 +947,6 @@ def Create_DigitalBody(LimbDictionary):
     else:
         print("Not all limbs are registered as being connected. Body can not be digitally assembled. Please fix and try again.")
     return WholeBody
-
-def CorrectPortHandler(servoID):
-    out_port_handler = None
-    if (servoID == 1) or (servoID == 2) or (servoID == 3) or (servoID == 4): # Limb #1
-        out_port_handler = 0
-    elif (servoID == 5) or (servoID == 6) or (servoID == 7) or (servoID == 8): # Limb #2
-        out_port_handler = 0
-    elif (servoID == 9) or (servoID == 10) or (servoID == 11) or (servoID == 12): # Limb #3
-        out_port_handler = 1
-    elif (servoID == 13) or (servoID == 14) or (servoID == 15) or (servoID == 16): # Limb #4
-        out_port_handler = 1
-    elif (servoID == 17) or (servoID == 18): # Limb #5
-        out_port_handler = 2
-    elif (servoID == 19) or (servoID == 20) or (servoID == 21) or (servoID == 22): # Limb #6
-        out_port_handler = 2
-    elif (servoID == 23) or (servoID == 24): # Limb #7
-        out_port_handler = 2
-    else:
-        print("The correct port handler can not be identified because the servo ID isn't recognized. Please fix and try again.")
-    return out_port_handler
 
 def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, packet_handler, stride_numbers, record_array, start_time):
     ports_used = [0, 0, 0]

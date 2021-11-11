@@ -1,7 +1,8 @@
 ## Tilibot Classes
 
 from Tilibot_Constants import *
-from Tilibot_Functions import *
+# from Tilibot_Functions import *
+from Tilibot_Universal_Functions import *
 from dynamixel_sdk import *
 import time
 

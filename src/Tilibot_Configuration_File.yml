@@ -74,6 +74,6 @@ Spine-Straight: True                                                            
 Tail-Straight: True                                                                                 #30
 ##
 
-Silence-Extraneous-Output: No # Not set up yet                                                                      #31  
-Run-Digital-Only: No          # Not set up yet                                                                      #32  
+Silence-Extraneous-Output: No # Not set up yet                                                      #31  
+Run-Digital-Only: No          # Not set up yet                                                      #32  
 
