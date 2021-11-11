@@ -36,4 +36,4 @@ For further instructions, please read the Tilibot_Reference.pdf in the Tilibot r
 5. For simplification purposes, you may also simply run the following:
 > python3 setup.py install --user
 
-It is highly recommended to run Tilibot_Install.py to check your library dependencies however.
+It is highly recommended to run Tilibot_Install.py however.
