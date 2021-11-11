@@ -112,103 +112,103 @@ def check_config_file(config_array):
     elif (config_array[17] > 1023) or (config_array[17] < 0):
         valid_home_speed = False
     
-    if (not isinstance(config_array[0],int)) or (config_array[0] <= 0):
+    if (not isinstance(config_array[0],int)) or (config_array[0] <= 0): # Check if baud rate is integer and less than or equal to 0
         print("Baud-Rate input is incorrect format. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[1],str)) or (not os.path.isfile(config_array[1])):
+    elif (not isinstance(config_array[1],str)) or (not os.path.isfile(config_array[1])): # Check if Position Angle File is string and proper file
         print("Position-Angle-File is not a valid String or is not a valid file. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[2],int)) or (config_array[2] <= 0):
+    elif (not isinstance(config_array[2],int)) or (config_array[2] <= 0): # Check if Positions per Stride is integer and less than or equal to 0
         print("Positions-Per-Stride is not a valid Integer number, or not the correct format. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[3],float)) or (config_array[3] <= 0):
+    elif (not isinstance(config_array[3],float)) or (config_array[3] <= 0): # Check if Stride Time is float and less than or equal to 0
         print("Stride-Time is not a valid Float number, or not the correct format. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[4],int)) or (config_array[0] <= 0):
+    elif (not isinstance(config_array[4],int)) or (config_array[0] <= 0): # Check if Stride Amount is integer and less than or equal to 0
         print("Stride-Amount is not a valid Integer number, or not the correct format.. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[5],list)) or (servo_count != 24) or (servo_all_bool == False):
+    elif (not isinstance(config_array[5],list)) or (servo_count != 24) or (servo_all_bool == False): # Check if Servos Connected is proper list, not 24 in length, or any of the servos is not a boolean
         print("Servos-Connected is not a correct list, not 24 in length, or one of the elements is not a Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[6],list)) or (limb_count != 7) or (limb_all_bool == False):
+    elif (not isinstance(config_array[6],list)) or (limb_count != 7) or (limb_all_bool == False): # Check if Limbs Connected is proper list, not 7 in length, or any of the limbs is not a boolean
         print("Limbs-Connected . Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[7],bool)):
+    elif (not isinstance(config_array[7],bool)): # Check if Whole Body Connected is boolean
         print("Whole-Body-Connected is not a Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[8],bool)):
+    elif (not isinstance(config_array[8],bool)): # Check if Move Body is boolean
         print("Move-Body is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[9],bool)):
+    elif (not isinstance(config_array[9],bool)): # Check if Move Single Limb is boolean
         print("Move-Single-Limb is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[10],int)) or (config_array[10] < 0):
+    elif (not isinstance(config_array[10],int)) or (config_array[10] < 0): # Check if Single Limb to Move is integer and not less than 0
         print("Single-Limb-To-Move is not a valid Integer. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[11],bool)):
+    elif (not isinstance(config_array[11],bool)): # Check if Move Multiple Limbs is boolean
         print("Move-Multiple-Limbs is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[12],list)) or (limbs_proper_ints == False):
+    elif (not isinstance(config_array[12],list)) or (limbs_proper_ints == False): # Check if Limbs to Move is proper list and all limbs are integers
         print("Limbs-To-Move is not a valid list or not all elements in it are Integers. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[13],bool)) :
+    elif (not isinstance(config_array[13],bool)) : # Check if Move Single Servo is boolean
         print("Move-Single-Servo is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[14],int)) or (config_array[14] < 0):
+    elif (not isinstance(config_array[14],int)) or (config_array[14] < 0): # Check if Single Servo to Move is integer and not less than 0
         print("Single-Servo-To-Move is not a valid Integer. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[15],bool)):
+    elif (not isinstance(config_array[15],bool)): # Check if Move Multiple Servos is proper booelans
         print("Move-Multiple-Servos is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[16],list)) or (servos_proper_ints == False):
+    elif (not isinstance(config_array[16],list)) or (servos_proper_ints == False): # Check if servos to move is proper list and all servos are integers
         print("Servos-To-Move is not a valid list or not all elements in it are Integers. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[17],int)) or (valid_home_speed == False):
+    elif (not isinstance(config_array[17],int)) or (valid_home_speed == False): # Check if Home Speed is integer and between 0 and 1023
         print("Home-Speed is not a valid Integer between 0-1023. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[18],str)):
+    elif (not isinstance(config_array[18],str)): # Check if Output File Name is valid string
         print("Output-File-Name is not a valid String value. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[19],str)) or (not os.path.isdir(config_array[19])):
+    elif (not isinstance(config_array[19],str)) or (not os.path.isdir(config_array[19])): # Check if Output File Directoy is valid string and proper directory
         print("Output-File-Directory is not a valid String or not a valid Directory. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[20],int)) or (config_array[20] <= 0):
+    elif (not isinstance(config_array[20],bool)): # Check if Position Record is proper boolean 
         print("Position is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[21],bool)):
+    elif (not isinstance(config_array[21],bool)): # Check if Speed Record is proper boolean
         print("Speed is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[22],bool)):
+    elif (not isinstance(config_array[22],bool)): # Check if Time Record is proper boolean
         print("Time is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[23],bool)):
+    elif (not isinstance(config_array[23],bool)): # Check Position Index Record is proper boolean
         print("Position-Index is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[24],bool)):
+    elif (not isinstance(config_array[24],bool)): # Check if Stride Count Record is proper boolean
         print("Stride-Count is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[25],bool)):
+    elif (not isinstance(config_array[25],bool)): # Check if Current Record is proper boolean
         print("Current is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[26],bool)):
+    elif (not isinstance(config_array[26],bool)): # Check if Voltage Record is proper boolean
         print("Voltage is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[27],bool)):
+    elif (not isinstance(config_array[27],bool)): # Check if Temperature Record is proper boolean
         print("Temperature is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[28],bool)):
+    elif (not isinstance(config_array[28],bool)): # Check if Silence Extraneous Output is proper boolean
         print("Silence-Extraneous-Output is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[29],bool)):
+    elif (not isinstance(config_array[29],bool)): # Check if Neck Straight is proper boolean
         print("Neck-Straight is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[30],bool)):
+    elif (not isinstance(config_array[30],bool)): # Check if Spine Straight is proper boolean
         print("Spine-Straight is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[31],bool)):
+    elif (not isinstance(config_array[31],bool)): # Check if Tail Straight is proper boolean
         print("Tail-Straight is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
-    elif (not isinstance(config_array[32],bool)):
+    elif (not isinstance(config_array[32],bool)): # Check if Run Digital Only is proper boolean
         print("Run-Digital-Only is not a valid Boolean. Please fix and try again.")
         invalidate_value = True
 
@@ -257,7 +257,7 @@ def check_config_file(config_array):
     
     return invalidate_value, confirmed_action
 
-def RecordPreferences(config_array):
+def RecordPreferences(config_array): # Check if any of the record fields are set to True for recording purposes
     record_fields = [config_array[20], config_array[21], config_array[22], config_array[23], config_array[24],
                     config_array[25], config_array[26], config_array[27]]
     record_yesno = None
@@ -265,7 +265,6 @@ def RecordPreferences(config_array):
         record_yesno = True
     else:
         record_yesno = False
-    # Consider using bit array for information
     record_fields.insert(0,record_yesno)
     new_path = os.path.join(config_array[19],config_array[18])
     outfile_whole = os.path.normpath(new_path)
@@ -276,7 +275,7 @@ def Packet_Port_Setup(config_array):
     # Initialize PortHandler instance
     # Set the port path
     # Get methods and members of PortHandlerLinux or PortHandlerWindows
-    ports_used = [0, 0, 0, 0]
+    ports_used = [0, 0, 0, 0] # Create ports used list and port handlers to edit
     portHandler_1 = 0
     portHandler_2 = 0
     portHandler_3 = 0
@@ -291,12 +290,12 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate")
                 print("Press any key to terminate...")
-                getch() # pylint: disable=undefined-variable
+                getch() 
                 return
         else:
             print("Failed to open the port")
             print("Press any key to terminate...")
-            getch() # pylint: disable=undefined-variable
+            getch() 
             return
         portHandler_2 = PortHandler(DEVICENAME_2)
         if portHandler_2.openPort():
@@ -306,12 +305,12 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate")
                 print("Press any key to terminate...")
-                getch() # pylint: disable=undefined-variable
+                getch() 
                 return
         else:
             print("Failed to open the port")
             print("Press any key to terminate...")
-            getch() # pylint: disable=undefined-variable
+            getch() 
             return
         portHandler_3 = PortHandler(DEVICENAME_3)
         if portHandler_3.openPort():
@@ -321,14 +320,14 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate")
                 print("Press any key to terminate...")
-                getch() # pylint: disable=undefined-variable
+                getch() 
                 return
         else:
             print("Failed to open the port")
             print("Press any key to terminate...")
-            getch() # pylint: disable=undefined-variable
+            getch() 
             return
-        # portHandler_4 = PortHandler(DEVICENAME_4)
+        # portHandler_4 = PortHandler(DEVICENAME_4) # Port #4 Reserved for sensors
         # if portHandler_4.openPort():
         #     print("Succeeded to open the port (#4")
         #     # Set port baudrate
@@ -337,12 +336,12 @@ def Packet_Port_Setup(config_array):
         #     else:
         #         print("Failed to change the baudrate")
         #         print("Press any key to terminate...")
-        #         getch() # pylint: disable=undefined-variable
+        #         getch() 
         #         return
         # else:
         #     print("Failed to open the port")
         #     print("Press any key to terminate...")
-        #     getch() # pylint: disable=undefined-variable
+        #     getch() 
         #     return
         portHandler_4 = 0
         ports_used = [1, 1, 1, 1]
@@ -375,12 +374,12 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return
                 elif (accesed_port == 1) and (count_2 == 1):
                     portHandler_2 = PortHandler(DEVICENAME_2)
@@ -391,12 +390,12 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return
                 elif (accesed_port == 1) and (count_2 == 2):
                     portHandler_3 = PortHandler(DEVICENAME_3)
@@ -407,15 +406,15 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return                    
                 elif (accesed_port == 1) and (count_2 == 3):
-                    # portHandler_4 = PortHandler(DEVICENAME_4)
+                    # portHandler_4 = PortHandler(DEVICENAME_4) # Port #4 Reserved for sensors
                     # if portHandler_4.openPort():
                     #     print("Succeeded to open the port (#4")
                     #     # Set port baudrate
@@ -424,12 +423,12 @@ def Packet_Port_Setup(config_array):
                     #     else:
                     #         print("Failed to change the baudrate")
                     #         print("Press any key to terminate...")
-                    #         getch() # pylint: disable=undefined-variable
+                    #         getch() 
                     #         return
                     # else:
                     #     print("Failed to open the port")
                     #     print("Press any key to terminate...")
-                    #     getch() # pylint: disable=undefined-variable
+                    #     getch() 
                     #     return
                     portHandler_4 = 0
                 else:
@@ -457,12 +456,12 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return
                 elif (count_2 == 1) and (port_used == 1):
                     portHandler_2 = PortHandler(DEVICENAME_2)
@@ -474,12 +473,12 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return
                 elif (count_2 == 2) and (port_used == 1):
                     portHandler_3 = PortHandler(DEVICENAME_3)
@@ -492,15 +491,15 @@ def Packet_Port_Setup(config_array):
                         else:
                             print("Failed to change the baudrate")
                             print("Press any key to terminate...")
-                            getch() # pylint: disable=undefined-variable
+                            getch() 
                             return
                     else:
                         print("Failed to open the port")
                         print("Press any key to terminate...")
-                        getch() # pylint: disable=undefined-variable
+                        getch() 
                         return    
                 elif (count_2 == 3) and (port_used == 1):
-                    # portHandler_4 = PortHandler(DEVICENAME_4)
+                    # portHandler_4 = PortHandler(DEVICENAME_4) # Port #4 Reserved for sensors
                     # if portHandler_4.openPort():
                     #     print("Succeeded to open the port (#4")
                     #     # Set port baudrate
@@ -509,12 +508,12 @@ def Packet_Port_Setup(config_array):
                     #     else:
                     #         print("Failed to change the baudrate")
                     #         print("Press any key to terminate...")
-                    #         getch() # pylint: disable=undefined-variable
+                    #         getch() 
                     #         return
                     # else:
                     #     print("Failed to open the port")
                     #     print("Press any key to terminate...")
-                    #     getch() # pylint: disable=undefined-variable
+                    #     getch() 
                     #     return
                     portHandler_4 = 0
                 else:
@@ -532,7 +531,8 @@ def Packet_Port_Setup(config_array):
     return portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler
 
 def DigitalSetup(config_array):
-
+    print("Digital Setup Selected. Setting up digital Tilibot without physical connected apparatus.")
+    print("Extraneous Output is set to {s}".format(config_array[31]))
     return
 
 def RotatePositionArray(inArray,shiftNum,arrayLength):
@@ -550,176 +550,166 @@ def RotatePositionArray(inArray,shiftNum,arrayLength):
         inArray[j] = temp
     return inArray
 
-def DataAddrConversion(DesiredData):
-    DataAddr = -1
-    # Get the address of the desired data trait, used in conjuction with ReturnRelevantData and ChangeSpecificTrait
-    if (DesiredData >= 1 and DesiredData <= 48):
-        DataAddr = AddrDict[DesiredData]
-    else:
-        print("That's not a recognized trait selection, please try again!\n")
-    return DataAddr if DataAddr is not -1 else -1
-
 def ReadServoAngles(positionsFile):
+    old_df = pd.read_csv(positionsFile) # Read in Positions File as dataframe
+    old_df = old_df.values[:][:] # Change dataframe into matrix
 
-    old_df = pd.read_csv(positionsFile)
-    old_df = old_df.values[:][:]
-
-    FL_ST_R_1 = old_df[:,0]
+    FL_ST_R_1 = old_df[:,0] # Break up matrix into single arrays
     FL_ST_R_2 = old_df[:,1]
     FL_ST_R_3 = old_df[:,2]
     FL_ST_R_4 = old_df[:,3]
 
-    FL_SW_R_1 = old_df[:,4]
+    FL_SW_R_1 = old_df[:,4] # Break up matrix into single arrays
     FL_SW_R_2 = old_df[:,5]
     FL_SW_R_3 = old_df[:,6]
     FL_SW_R_4 = old_df[:,7]
 
-    FL_TOT_R_1 = np.concatenate((FL_ST_R_1, FL_SW_R_1),axis=0)
+    FL_TOT_R_1 = np.concatenate((FL_ST_R_1, FL_SW_R_1),axis=0) # Attach Swing phase to end of Stance phase as single array
     FL_TOT_R_2 = np.concatenate((FL_ST_R_2, FL_SW_R_2),axis=0)
     FL_TOT_R_3 = np.concatenate((FL_ST_R_3, FL_SW_R_3),axis=0)
     FL_TOT_R_4 = np.concatenate((FL_ST_R_4, FL_SW_R_4),axis=0)
 
-    FL_ST_L_1 = old_df[:,0]
+    FL_ST_L_1 = old_df[:,0] # Break up matrix into single arrays
     FL_ST_L_2 = old_df[:,1]
     FL_ST_L_3 = old_df[:,2]
     FL_ST_L_4 = old_df[:,3]
 
-    FL_SW_L_1 = old_df[:,4]
+    FL_SW_L_1 = old_df[:,4] # Break up matrix into single arrays
     FL_SW_L_2 = old_df[:,5]
     FL_SW_L_3 = old_df[:,6]
     FL_SW_L_4 = old_df[:,7]
 
-    FL_TOT_L_1 = np.concatenate((FL_ST_L_1, FL_SW_L_1),axis=0)
+    FL_TOT_L_1 = np.concatenate((FL_ST_L_1, FL_SW_L_1),axis=0) # Attach Swing phase to end of Stance phase as single array
     FL_TOT_L_2 = np.concatenate((FL_ST_L_2, FL_SW_L_2),axis=0)
     FL_TOT_L_3 = np.concatenate((FL_ST_L_3, FL_SW_L_3),axis=0)
     FL_TOT_L_4 = np.concatenate((FL_ST_L_4, FL_SW_L_4),axis=0)
 
-    HL_ST_R_1 = old_df[:,8]
+    HL_ST_R_1 = old_df[:,8] # Break up matrix into single arrays
     HL_ST_R_2 = old_df[:,9]
     HL_ST_R_3 = old_df[:,10]
     HL_ST_R_4 = old_df[:,11]
 
-    HL_SW_R_1 = old_df[:,12]
+    HL_SW_R_1 = old_df[:,12] # Break up matrix into single arrays
     HL_SW_R_2 = old_df[:,13]
     HL_SW_R_3 = old_df[:,14]
     HL_SW_R_4 = old_df[:,15]
 
-    HL_TOT_R_1 = np.concatenate((HL_ST_R_1, HL_SW_R_1),axis=0)
+    HL_TOT_R_1 = np.concatenate((HL_ST_R_1, HL_SW_R_1),axis=0) # Attach Swing phase to end of Stance phase as single array
     HL_TOT_R_2 = np.concatenate((HL_ST_R_2, HL_SW_R_2),axis=0)
     HL_TOT_R_3 = np.concatenate((HL_ST_R_3, HL_SW_R_3),axis=0)
     HL_TOT_R_4 = np.concatenate((HL_ST_R_4, HL_SW_R_4),axis=0)
 
-    HL_ST_L_1 = old_df[:,8]
+    HL_ST_L_1 = old_df[:,8] # Break up matrix into single arrays
     HL_ST_L_2 = old_df[:,9]
     HL_ST_L_3 = old_df[:,10]
     HL_ST_L_4 = old_df[:,11]
 
-    HL_SW_L_1 = old_df[:,12]
+    HL_SW_L_1 = old_df[:,12] # Break up matrix into single arrays
     HL_SW_L_2 = old_df[:,13]
     HL_SW_L_3 = old_df[:,14]
     HL_SW_L_4 = old_df[:,15]
 
-    HL_TOT_L_1 = np.concatenate((HL_ST_L_1, HL_SW_L_1),axis=0)
+    HL_TOT_L_1 = np.concatenate((HL_ST_L_1, HL_SW_L_1),axis=0) # Attach Swing phase to end of Stance phase as single array
     HL_TOT_L_2 = np.concatenate((HL_ST_L_2, HL_SW_L_2),axis=0)
     HL_TOT_L_3 = np.concatenate((HL_ST_L_3, HL_SW_L_3),axis=0)
     HL_TOT_L_4 = np.concatenate((HL_ST_L_4, HL_SW_L_4),axis=0)
 
     dyn_con = 4096/360
 
-    j = 0
+    index = 0
     for i in FL_TOT_R_1:    # Right Forelimb Servo #1
-        FL_TOT_R_1[j] = 2048 - (i * dyn_con)
-        j += 1
+        FL_TOT_R_1[index] = 2048 - (i * dyn_con)
+        index += 1
     FL_TOT_R_1 = FL_TOT_R_1.round()
     FL_TOT_R_1 = list(map(int,FL_TOT_R_1))
-    j = 0
+    index = 0
     for i in FL_TOT_R_2:    # Right Forelimb Servo #2
-        FL_TOT_R_2[j] = 2048 + (i * dyn_con)
-        j += 1
+        FL_TOT_R_2[index] = 2048 + (i * dyn_con)
+        index += 1
     FL_TOT_R_2 = FL_TOT_R_2.round()
     FL_TOT_R_2 = list(map(int,FL_TOT_R_2))
-    j = 0
+    index = 0
     for i in FL_TOT_R_3:    # Right Forelimb Servo #3
-        FL_TOT_R_3[j] = 2048 + (i * dyn_con)
-        j += 1
+        FL_TOT_R_3[index] = 2048 + (i * dyn_con)
+        index += 1
     FL_TOT_R_3 = FL_TOT_R_3.round()
     FL_TOT_R_3 = list(map(int,FL_TOT_R_3))
-    j = 0
+    index = 0
     for i in FL_TOT_R_4:    # Right Forelimb Servo #4
-        FL_TOT_R_4[j] = 2048 + (i * dyn_con)
-        j += 1
+        FL_TOT_R_4[index] = 2048 + (i * dyn_con)
+        index += 1
     FL_TOT_R_4 = FL_TOT_R_4.round()
     FL_TOT_R_4 = list(map(int,FL_TOT_R_4))
-    j = 0
+    index = 0
     for i in FL_TOT_L_1:    # Left Forelimb Servo #5
-        FL_TOT_L_1[j] = 2048 + ( i * dyn_con)
-        j += 1
+        FL_TOT_L_1[index] = 2048 + ( i * dyn_con)
+        index += 1
     FL_TOT_L_1 = FL_TOT_L_1.round()
     FL_TOT_L_1 = list(map(int,FL_TOT_L_1))
-    j = 0
+    index = 0
     for i in FL_TOT_L_2:    # Left Forelimb Servo #6
-        FL_TOT_L_2[j] = 2048 + (i * dyn_con)
-        j += 1
+        FL_TOT_L_2[index] = 2048 + (i * dyn_con)
+        index += 1
     FL_TOT_L_2 = FL_TOT_L_2.round()
     FL_TOT_L_2 = list(map(int,FL_TOT_L_2))
-    j = 0
+    index = 0
     for i in FL_TOT_L_3:    # Left Forelimb Servo #7
-        FL_TOT_L_3[j] = 2048 - (i * dyn_con)
-        j += 1
+        FL_TOT_L_3[index] = 2048 - (i * dyn_con)
+        index += 1
     FL_TOT_L_3 = FL_TOT_L_3.round()
     FL_TOT_L_3 = list(map(int,FL_TOT_L_3))
-    j = 0
+    index = 0
     for i in FL_TOT_L_4:    # Left Forelimb Servo #8
-        FL_TOT_L_4[j] = 2048 + (i * dyn_con)
-        j += 1
+        FL_TOT_L_4[index] = 2048 + (i * dyn_con)
+        index += 1
     FL_TOT_L_4 = FL_TOT_L_4.round()
     FL_TOT_L_4 = list(map(int,FL_TOT_L_4))
-    j = 0
+    index = 0
     for i in HL_TOT_R_1:    # Right Hindlimb Servo #9
-        HL_TOT_R_1[j] = 2048 - (i * dyn_con)
-        j += 1
+        HL_TOT_R_1[index] = 2048 - (i * dyn_con)
+        index += 1
     HL_TOT_R_1 = HL_TOT_R_1.round()
     HL_TOT_R_1 = list(map(int,HL_TOT_R_1))
-    j = 0
+    index = 0
     for i in HL_TOT_R_2:    # Right Hindlimb Servo #10
-        HL_TOT_R_2[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_R_2[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_R_2 = HL_TOT_R_2.round()
     HL_TOT_R_2 = list(map(int,HL_TOT_R_2))
-    j = 0
+    index = 0
     for i in HL_TOT_R_3:    # Right Hindlimb Servo #11
-        HL_TOT_R_3[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_R_3[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_R_3 = HL_TOT_R_3.round()
     HL_TOT_R_3 = list(map(int,HL_TOT_R_3))
-    j = 0
+    index = 0
     for i in HL_TOT_R_4:    # Right Hindlimb Servo #12
-        HL_TOT_R_4[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_R_4[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_R_4 = HL_TOT_R_4.round()
     HL_TOT_R_4 = list(map(int,HL_TOT_R_4))
-    j = 0
+    index = 0
     for i in HL_TOT_L_1:    # Left Hindlimb Servo #13
-        HL_TOT_L_1[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_L_1[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_L_1 = HL_TOT_L_1.round()
     HL_TOT_L_1 = list(map(int,HL_TOT_L_1))
-    j = 0
+    index = 0
     for i in HL_TOT_L_2:    # Left Hindlimb Servo #14
-        HL_TOT_L_2[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_L_2[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_L_2 = HL_TOT_L_2.round()
     HL_TOT_L_2 = list(map(int,HL_TOT_L_2))
-    j = 0
+    index = 0
     for i in HL_TOT_L_3:    # Left Hindlimb Servo #15
-        HL_TOT_L_3[j] = 2048 - (i * dyn_con)
-        j += 1
+        HL_TOT_L_3[index] = 2048 - (i * dyn_con)
+        index += 1
     HL_TOT_L_3 = HL_TOT_L_3.round()
     HL_TOT_L_3 = list(map(int,HL_TOT_L_3))
-    j = 0
+    index = 0
     for i in HL_TOT_L_4:    # Left Hindlimb Servo #16
-        HL_TOT_L_4[j] = 2048 + (i * dyn_con)
-        j += 1
+        HL_TOT_L_4[index] = 2048 + (i * dyn_con)
+        index += 1
     HL_TOT_L_4 = HL_TOT_L_4.round()
     HL_TOT_L_4 = list(map(int,HL_TOT_L_4))
 
@@ -786,75 +776,78 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride):
     f_st_per = f_stance / 8.24
     f_sw_per = f_swing / 8.24
     #Starting % index for each limb
-    L_hl = 0
-    L_fl = 9 # 90% Approximately
-    R_hl = 8 # 80% Approximately
-    R_fl = 1 # 10% Approximately
+    L_hl = 0 # Left Hindlimb
+    L_fl = 9 # Left Forelimb 90% Approximately
+    R_hl = 8 # Right Hindlimb 80% Approximately
+    R_fl = 1 # Right Forelimb 10% Approximately
     #Points per Phase
     pointsPerPhase = points_per_stride/2
     speeds = np.array(speeds)
     b = speeds.shape
-    cLength = int(b[1]/2)
+    phase_length = int(b[1]/2)
+    cLength = int(b[1])
     cWidth = int(b[0])
-    MoveIndex = np.linspace(1,int(b[1]),int(b[1]))
+    MoveIndex = np.linspace(1,int(cLength),int(cLength))
     servos = list(range(1,cWidth+1))
     MoveIndex = MoveIndex.astype(int).tolist()
     newSpeeds = []
     #t1 = np.zeros(b[1])
     for i in np.linspace(1,cWidth,cWidth):
-        newSpeeds.append(np.zeros(b[1]))
-    for i in servos:
-        for j in MoveIndex: 
-            if (i == 1 or i == 2 or i == 3 or i == 4 ):
-                if (j==b[1]):
-                    rotations = abs(speeds[i-1][0]-speeds[i-1][j-1])/4096
+        newSpeeds.append(np.zeros(cLength))
+    for each_servo in servos:
+        for stride_index in MoveIndex: #0.114 rpm given by https://emanual.robotis.com/docs/en/dxl/mx/mx-64/
+            if (each_servo == 1 or each_servo == 2 or each_servo == 3 or each_servo == 4 ):
+                if (stride_index==cLength):
+                    rotations = abs(speeds[each_servo-1][0]-speeds[each_servo-1][stride_index-1])/4096
                 else:
-                    rotations = abs(speeds[i-1][j]-speeds[i-1][j-1])/4096
-                if ((j-1) >= (pointsPerPhase - R_fl) and (j-1)<=(pointsPerPhase - R_fl + 10)):
-                    movementTime = (tspan*f_sw_per/cLength)/60
+                    rotations = abs(speeds[each_servo-1][stride_index]-speeds[each_servo-1][stride_index-1])/4096
+                if ((stride_index-1) >= (pointsPerPhase - R_fl) and (stride_index-1)<=(pointsPerPhase - R_fl + 10)):
+                    movementTime = (tspan*f_sw_per/phase_length)/60
                 else:
-                    movementTime = (tspan*f_st_per/cLength)/60
+                    movementTime = (tspan*f_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / 0.114
-                newSpeeds[i-1][j-1] = round(movementSpeed)
-            elif (i == 5 or i == 6 or i == 7 or i == 8): 
-                if (j==b[1]):
-                    rotations = abs(speeds[i-1][0]-speeds[i-1][j-1])/4096
+                newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
+            elif (each_servo == 5 or each_servo == 6 or each_servo == 7 or each_servo == 8): 
+                if (stride_index==cLength):
+                    rotations = abs(speeds[each_servo-1][0]-speeds[each_servo-1][stride_index-1])/4096
                 else:
-                    rotations = abs(speeds[i-1][j]-speeds[i-1][j-1])/4096
-                if ((j-1) >= (pointsPerPhase - L_fl) and (j-1)<=(pointsPerPhase - L_fl + 10)):
-                    movementTime = (tspan*f_sw_per/cLength)/60
+                    rotations = abs(speeds[each_servo-1][stride_index]-speeds[each_servo-1][stride_index-1])/4096
+                if ((stride_index-1) >= (pointsPerPhase - L_fl) and (stride_index-1)<=(pointsPerPhase - L_fl + 10)):
+                    movementTime = (tspan*f_sw_per/phase_length)/60
                 else:
-                    movementTime = (tspan*f_st_per/cLength)/60
+                    movementTime = (tspan*f_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / 0.114
-                newSpeeds[i-1][j-1] = round(movementSpeed)
-            elif (i == 9 or i == 10 or i == 11 or i == 12 ):
-                if (j==b[1]):
-                    rotations = abs(speeds[i-1][0]-speeds[i-1][j-1])/4096
+                newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
+            elif (each_servo == 9 or each_servo == 10 or each_servo == 11 or each_servo == 12 ):
+                if (stride_index==cLength):
+                    rotations = abs(speeds[each_servo-1][0]-speeds[each_servo-1][stride_index-1])/4096
                 else:
-                    rotations = abs(speeds[i-1][j]-speeds[i-1][j-1])/4096
-                if ((j-1) >= (pointsPerPhase - R_hl) and (j-1)<=(pointsPerPhase - R_hl + 10)):
-                    movementTime = (tspan*h_sw_per/cLength)/60
+                    rotations = abs(speeds[each_servo-1][stride_index]-speeds[each_servo-1][stride_index-1])/4096
+                if ((stride_index-1) >= (pointsPerPhase - R_hl) and (stride_index-1)<=(pointsPerPhase - R_hl + 10)):
+                    movementTime = (tspan*h_sw_per/phase_length)/60
                 else:
-                    movementTime = (tspan*h_st_per/cLength)/60
+                    movementTime = (tspan*h_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / 0.114
-                newSpeeds[i-1][j-1] = round(movementSpeed)
-            elif (i == 13 or i == 14 or i == 15 or i == 16 ):
-                if (j==b[1]):
-                    rotations = abs(speeds[i-1][0]-speeds[i-1][j-1])/4096
+                newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
+            elif (each_servo == 13 or each_servo == 14 or each_servo == 15 or each_servo == 16 ):
+                if (stride_index==cLength):
+                    rotations = abs(speeds[each_servo-1][0]-speeds[each_servo-1][stride_index-1])/4096
                 else:
-                    rotations = abs(speeds[i-1][j]-speeds[i-1][j-1])/4096
-                if ((j-1) >= (pointsPerPhase - L_hl) and (j-1)<=(pointsPerPhase - L_hl + 10)):
-                    movementTime = (tspan*h_sw_per/cLength)/60
+                    rotations = abs(speeds[each_servo-1][stride_index]-speeds[each_servo-1][stride_index-1])/4096
+                if ((stride_index-1) >= (pointsPerPhase - L_hl) and (stride_index-1)<=(pointsPerPhase - L_hl + 10)):
+                    movementTime = (tspan*h_sw_per/phase_length)/60
                 else:
-                    movementTime = (tspan*h_st_per/cLength)/60
+                    movementTime = (tspan*h_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / 0.114
-                newSpeeds[i-1][j-1] = round(movementSpeed)
-    for i in servos:
-        newSpeeds[i-1] = newSpeeds[i-1].astype(int)
-    for j in servos:
-        newSpeeds[j-1][newSpeeds[j-1] > 1023] = 1023
-        newSpeeds[j-1][newSpeeds[j-1] == 0] = 1
-
+                newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
+            else:
+                print("Program not set up to calculate speeds for spine yet. Exiting now.")
+                exit()
+    for each_servo in servos:
+        for stride_index in MoveIndex:
+            newSpeeds[each_servo-1][stride_index-1] = newSpeeds[each_servo-1][stride_index-1].astype(int)
+        newSpeeds[each_servo-1][newSpeeds[each_servo-1] > 1023] = 1023 # For Joint Mode/Multi-turn Mode, 0-1023 is the range for speeds
+        newSpeeds[each_servo-1][newSpeeds[each_servo-1] == 0] = 1 # 0 sets the speed to the fastest possible, NOT the slowest
     return newSpeeds
     
 def Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix):
@@ -880,13 +873,27 @@ def Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix):
                 if config_array[28] == True:
                     pass
             elif (ID == 19) or (ID == 20) or (ID == 21) or (ID == 22): # Needs to be checked
-                Max_Position_Limit = 3072
-                Min_Position_Limit = 1024
+                if (ID == 19):
+                    Max_Position_Limit = 3072
+                    Min_Position_Limit = 1024
+                elif (ID == 20):
+                    Max_Position_Limit = 2800
+                    Min_Position_Limit = 1350
+                elif (ID == 21):
+                    Max_Position_Limit = 2800
+                    Min_Position_Limit = 1350
+                elif (ID == 22):
+                    Max_Position_Limit = 3072
+                    Min_Position_Limit = 1024
                 if config_array[29] == True:
                     pass
-            elif (ID == 23) or (ID == 24): # Needs to be checked
-                Max_Position_Limit = 3072
-                Min_Position_Limit = 1024
+            elif (ID == 23) or (ID == 24):
+                if (ID == 23):
+                    Max_Position_Limit = 3072
+                    Min_Position_Limit = 1024
+                elif (ID==24):
+                    Max_Position_Limit = 2700
+                    Min_Position_Limit = 1400
                 if config_array[30] == True:
                     pass
             else:
@@ -894,7 +901,7 @@ def Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix):
                 Min_Position_Limit = 1024
             MaxMinLimit = (Max_Position_Limit, Min_Position_Limit)
             
-            NewServo = Servo(ID,PositionsMatrix[ID-1][:], SpeedMatrix[:][ID-1], MaxMinLimit)
+            NewServo = Servo(ID,PositionsMatrix[ID-1][:], SpeedMatrix[ID-1][:], MaxMinLimit)
             print("Servo #%d has been digitally created." % (NewServo.ID))
             ServoDictionary[ID] = NewServo
     return ServoDictionary 

@@ -147,7 +147,7 @@ def ResetServo(servo_num,port_hand_list,packet_handler,config_array,reset_value)
 
         # Set port baudrate to BAUDRATE
         if port_hand_list[0].setBaudRate(config_array[0]):
-            print("Succeeded to change the controller baudrate to : %d" % BAUDRATE)
+            print("Succeeded to change the controller baudrate to : %d" % config_array[0])
         else:
             print("Failed to change the controller baudrate")
             print("Press any key to terminate...")
@@ -192,7 +192,7 @@ def ResetServo(servo_num,port_hand_list,packet_handler,config_array,reset_value)
 
         # Set port baudrate to BAUDRATE
         if port_hand_list[1].setBaudRate(config_array[0]):
-            print("Succeeded to change the controller baudrate to : %d" % BAUDRATE)
+            print("Succeeded to change the controller baudrate to : %d" % config_array[0])
         else:
             print("Failed to change the controller baudrate")
             print("Press any key to terminate...")
@@ -237,7 +237,7 @@ def ResetServo(servo_num,port_hand_list,packet_handler,config_array,reset_value)
 
         # Set port baudrate to BAUDRATE
         if port_hand_list[2].setBaudRate(config_array[0]):
-            print("Succeeded to change the controller baudrate to : %d" % BAUDRATE)
+            print("Succeeded to change the controller baudrate to : %d" % config_array[0])
         else:
             print("Failed to change the controller baudrate")
             print("Press any key to terminate...")

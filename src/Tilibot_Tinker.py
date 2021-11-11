@@ -59,6 +59,15 @@ def DisplayServoTraits():
     print("47: Present Input Voltage")
     print("48: Present Temperature\n")
 
+def DataAddrConversion(DesiredData):
+    DataAddr = -1
+    # Get the address of the desired data trait, used in conjuction with ReadTrait and WriteTrait
+    if (DesiredData >= 1 and DesiredData <= 48):
+        DataAddr = AddrDict[DesiredData]
+    else:
+        print("That's not a recognized trait selection, please try again!\n")
+    return DataAddr if DataAddr is not -1 else -1
+
 def ReadTraitData(DesiredData,DesiredServo,portHandler,packetHandler):
     # Obtain from the desired servo the desired trait data
 
