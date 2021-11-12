@@ -11,6 +11,7 @@ import time
 class Servo:
     def __init__(self,IDnum,Positions,Speeds,MaxMinMov,digital_only=None):
         self.ID = IDnum
+        self.digital_only = False
         if digital_only == None:
             self.digital_only == False
         self.Positions = Positions

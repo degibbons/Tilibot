@@ -3,7 +3,6 @@
 # Control table address and Values
 ADDR_PRO_TORQUE_ENABLE      = 64               # Control table address is different in Dynamixel model
 ADDR_PRO_GOAL_POSITION      = 116
-ADDR_PRO_PRESENT_POSITION   = 132
 ADDR_VELOCITY_LIMIT         = 44            #4
 ADDR_DRIVE_MODE             = 10            #1          0       # |0=vELOCITY BASED| 1=TIME_BASED|
 DRIVE_MODE_VEL_BASED        = 0            #establish default drive mode, time or vel based
@@ -17,7 +16,6 @@ MAX_POSITION_LIMIT          = 4095
 MIN_POSITION_LIMIT          = 0
 ADDR_MOVING_THRESHOLD       = 24            #4          10      #ESSENTIALLY ACCURACY TOLERANCE
 MOVING_THRESHOLD_ACCURACY_H = 1
-VELOCITY_LIMIT_H            = 1023
 ADDR_PROFILE_VELOCITY       = 112
 ADDR_MOVING                 = 122 
 
@@ -28,11 +26,6 @@ ADDR_PRO_BAUDRATE = 8                             # Control table address is dif
 
 # Protocol version
 PROTOCOL_VERSION = 2.0               # See which protocol version is used in the Dynamixel
-
-# Positions File Name
-PositionsFile = "Kinematics_5.csv"
-
-rows, cols = (22, 16) 
 
 # Default setting
 DXL_ID = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]

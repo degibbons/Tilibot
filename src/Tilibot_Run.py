@@ -35,10 +35,10 @@ if invalidate_value == True:
     print("Shutting Down Tilibot...")
     exit()
 
-if config_array[29] == True:
+if config_array[32] == True:
     # DigitalSetup(config_array)
     pass
-elif config_array[29] == False:
+elif config_array[32] == False:
     [portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler] = Packet_Port_Setup(config_array)
     port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4]
 else:

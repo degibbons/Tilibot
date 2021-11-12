@@ -867,12 +867,12 @@ def Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix):
             elif (ID == 4) or (ID == 8) or (ID == 12) or (ID == 16):
                 Max_Position_Limit = 2820
                 Min_Position_Limit = 1024
-            elif (ID == 17) or (ID == 18): # Needs to be checked
+            elif (ID == 17) or (ID == 18): 
                 Max_Position_Limit = 3072
                 Min_Position_Limit = 1024
                 if config_array[28] == True:
                     pass
-            elif (ID == 19) or (ID == 20) or (ID == 21) or (ID == 22): # Needs to be checked
+            elif (ID == 19) or (ID == 20) or (ID == 21) or (ID == 22): 
                 if (ID == 19):
                     Max_Position_Limit = 3072
                     Min_Position_Limit = 1024
@@ -913,7 +913,7 @@ def Create_DigitalLimbs(config_array,ServoDictionary):
         if connected_limb == True:
             entire_limb_not_present = False
             for servo in BODY[Limb_ID]:
-                if ServoDictionary.has_key(servo):
+                if servo in ServoDictionary:
                     servo_limb_dic[ServoDictionary[servo].ID] = ServoDictionary[servo]
                 else:
                     entire_limb_not_present = True
@@ -924,19 +924,19 @@ def Create_DigitalLimbs(config_array,ServoDictionary):
                 Limb_ID += 1
                 if (Limb_ID >= 1) and (Limb_ID <= 4):
                     NewLimb = Leg(Limb_ID, servo_limb_dic)
-                    print("Limb #%d has been digitally created" % (NewLimb.ID))
+                    print("Limb #%d has been digitally created" % (NewLimb.LimbNumber))
                     LimbDictionary[Limb_ID] = NewLimb
                 elif (Limb_ID == 5):
                     NewLimb = Neck(Limb_ID, servo_limb_dic)
-                    print("Limb #%d has been digitally created" % (NewLimb.ID))
+                    print("Limb #%d has been digitally created" % (NewLimb.LimbNumber))
                     LimbDictionary[Limb_ID] = NewLimb
                 elif (Limb_ID == 6):
                     NewLimb = Spine(Limb_ID, servo_limb_dic)
-                    print("Limb #%d has been digitally created" % (NewLimb.ID))
+                    print("Limb #%d has been digitally created" % (NewLimb.LimbNumber))
                     LimbDictionary[Limb_ID] = NewLimb
                 elif (Limb_ID == 7):
                     NewLimb = Tail(Limb_ID, servo_limb_dic)
-                    print("Limb #%d has been digitally created" % (NewLimb.ID))
+                    print("Limb #%d has been digitally created" % (NewLimb.LimbNumber))
                     LimbDictionary[Limb_ID] = NewLimb
             servo_limb_dic = {}
     return LimbDictionary
@@ -944,7 +944,7 @@ def Create_DigitalLimbs(config_array,ServoDictionary):
 def Create_DigitalBody(LimbDictionary):
     all_limbs_present = True
     for Limb_ID in BODY_LIMB_IDS:
-        if LimbDictionary.has_keys(Limb_ID):
+        if Limb_ID in LimbDictionary:
             pass
         else:
             all_limbs_present = False
