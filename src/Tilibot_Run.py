@@ -41,6 +41,8 @@ if config_array[32] == True:
 elif config_array[32] == False:
     [portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler] = Packet_Port_Setup(config_array)
     port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4]
+    dxl_data_list = PingServos(port_hand_list,packetHandler)
+    port_servo_dict = Port_Servo_Assign(dxl_data_list)
 else:
     print("Error in run option. Please fix and try again.")
 
@@ -52,7 +54,6 @@ SpeedMatrix = DetermineSpeeds(config_array[3],PositionsMatrix,config_array[2])
 print("Speeds Calculated.")
 
 Obj_list = []
-
 ServosDictionary = Create_DigitalServos(config_array, PositionsMatrix, SpeedMatrix)
 Obj_list.append(ServosDictionary)
 
@@ -64,20 +65,20 @@ if config_array[7] == True:
     TilibotBody = Create_DigitalBody(LimbDictionary)
     Obj_list.append(TilibotBody)
 
-if confirmed_action[0] == 1:
+if confirmed_action[0] == 1: # Move Whole Body
     TilibotBody.InitialSetup()
     TilibotBody.ToggleTorque(1)
     speed_list = TilibotBody.DetermineVelocities(-1,config_array[17])
-    TilibotBody.SetLimbVelocity(speed_list,port_hand_list,packet_handler)
-    TilibotBody.MoveSpineHome(config_array[17],port_hand_list,packet_handler)
-    TilibotBody.MoveLegsHome(config_array[17],port_hand_list,packet_handler)
+    TilibotBody.SetLimbVelocity(speed_list,port_hand_list,packetHandler)
+    TilibotBody.MoveSpineHome(config_array[17],port_hand_list,packetHandler)
+    TilibotBody.MoveLegsHome(config_array[17],port_hand_list,packetHandler)
     print("Tilibot Body has been moved to Home Position.")
     print("Please press enter when you are ready to begin.")
     getch()
     out_data = TilibotBody.ContinuousLegsMove(stride_numbers, record_array)
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 2:
+elif confirmed_action[0] == 2: # Move Single Limb
     limb_to_move = LimbDictionary[confirmed_action[1]]
     limb_to_move.InitialSetup()
     limb_to_move.ToggleTorque(1)
@@ -89,7 +90,7 @@ elif confirmed_action[0] == 2:
     out_data = limb_to_move.ContinuousMove(port_hand_list,packetHandler,stride_numbers, record_array, start_time)
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 3:
+elif confirmed_action[0] == 3: # Move Numerous Limbs
     for each_limb in confirmed_action[1]:
         LimbDictionary[each_limb].InitialSetup()
         LimbDictionary[each_limb].ToggleTorque(1)
@@ -101,7 +102,7 @@ elif confirmed_action[0] == 3:
     out_data = MoveNumerousLimbs(confirmed_action[1],LimbDictionary,ServosDictionary,port_hand_list,packetHandler,stride_numbers,record_array,start_time)
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 4:
+elif confirmed_action[0] == 4: # Move Single Servo
     servo_to_move = ServosDictionary[confirmed_action[1]]
     servo_to_move.InitialSetup(port_hand_list[CorrectPortHandler(servo_to_move.ID)])
     servo_to_move.ToggleTorque(1,port_hand_list[CorrectPortHandler(servo_to_move.ID)])
@@ -113,7 +114,7 @@ elif confirmed_action[0] == 4:
     out_data = servo_to_move.ContinuousMove(port_hand_list[CorrectPortHandler(servo_to_move.ID)], stride_numbers, record_array, start_time)
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 5:
+elif confirmed_action[0] == 5: # Move Numerous Servos
     for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].InitialSetup(port_hand_list[CorrectPortHandler(each_servo)])
         ServosDictionary[each_servo].ToggleTorque(1,port_hand_list[CorrectPortHandler(each_servo)])
