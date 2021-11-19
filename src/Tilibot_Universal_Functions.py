@@ -44,6 +44,7 @@ def Packet_Port_Setup(config_array):
         print("Port (#1) now closed.")
     except:
         print("Port (#1) is not able to be opened.")
+        portHandler_1 = 0
     try: 
         portHandler_2.openPort()
         print("Succeeded to open the port (#2) - CHECK")
@@ -52,6 +53,7 @@ def Packet_Port_Setup(config_array):
         print("Port (#2) now closed.")
     except:
         print("Port (#2) is not able to be opened.")
+        portHandler_2 = 0
     try: 
         portHandler_3.openPort()
         print("Succeeded to open the port (#3) - CHECK")
@@ -60,6 +62,7 @@ def Packet_Port_Setup(config_array):
         print("Port (#3) now closed.")
     except:
         print("Port (#3) is not able to be opened.")
+        portHandler_3 = 0
     portHandler_4 = 0
     if ports_used[0] == 1:
         if portHandler_1.openPort():
@@ -69,11 +72,13 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate - 1")
                 print("Press any key to terminate...")
-                getch() 
+                getch()
+            
         else:
             print("Failed to open the port - 1")
             print("Press any key to terminate...")
             getch() 
+        
     if ports_used[1] == 1:
         if portHandler_2.openPort():
             print("Succeeded to open the port (#2) - ACTUAL")
@@ -82,7 +87,8 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate - 2")
                 print("Press any key to terminate...")
-                getch() 
+                getch()
+            
         else:
             print("Failed to open the port - 2")
             print("Press any key to terminate...")
@@ -95,7 +101,8 @@ def Packet_Port_Setup(config_array):
             else:
                 print("Failed to change the baudrate - 3")
                 print("Press any key to terminate...")
-                getch()    
+                getch()   
+            
         else:
             print("Failed to open the port - 3")
             print("Press any key to terminate...")
@@ -112,6 +119,9 @@ def Packet_Port_Setup(config_array):
     return portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler
 
 def PingServos(port_hand_list,packet_handler):
+    dxl_port_list_1 = []
+    dxl_port_list_2 = []
+    dxl_port_list_3 = []
     if port_hand_list[0] != 0:
         # Try to broadcast ping the Dynamixel
         dxl_data_list_1, dxl_comm_result = packet_handler.broadcastPing(port_hand_list[0])
@@ -137,47 +147,39 @@ def PingServos(port_hand_list,packet_handler):
         time.sleep(1)
         # Close port
         port_hand_list[2].closePort()
-    print("\nFrom Port (#1):")
-    for dxl_id in dxl_data_list_1:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_1.get(dxl_id)[0], dxl_data_list_1.get(dxl_id)[1]))
-    print("\nFrom Port (#2):")
-    for dxl_id in dxl_data_list_2:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_2.get(dxl_id)[0], dxl_data_list_2.get(dxl_id)[1]))
-    print("\nFrom Port (#3):")
-    for dxl_id in dxl_data_list_3:
-        print("[ID:%03d] Detected" % (dxl_id))
-        print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_3.get(dxl_id)[0], dxl_data_list_3.get(dxl_id)[1]))
-    
-    dxl_data_list = {**dxl_data_list_1, **dxl_data_list_2, **dxl_data_list_3}
+    if port_hand_list[0] != 0:
+        print("\nFrom Port (#1):")
+        for dxl_id in dxl_data_list_1:
+            print("[ID:%03d] Detected" % (dxl_id))
+            print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_1.get(dxl_id)[0], dxl_data_list_1.get(dxl_id)[1]))
+            dxl_port_list_1.append(dxl_id)
+    if port_hand_list[1] != 0:
+        print("\nFrom Port (#2):")
+        for dxl_id in dxl_data_list_2:
+            print("[ID:%03d] Detected" % (dxl_id))
+            print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_2.get(dxl_id)[0], dxl_data_list_2.get(dxl_id)[1]))
+            dxl_port_list_2.append(dxl_id)
+    if port_hand_list[2] != 0:
+        print("\nFrom Port (#3):")
+        for dxl_id in dxl_data_list_3:
+            print("[ID:%03d] Detected" % (dxl_id))
+            print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_3.get(dxl_id)[0], dxl_data_list_3.get(dxl_id)[1]))
+            dxl_port_list_3.append(dxl_id)
+
+
+    dxl_data_list = [dxl_port_list_1, dxl_port_list_2, dxl_port_list_3]
     return dxl_data_list
 
 def Port_Servo_Assign(dxl_data_list,port_hand_list):
-    port_servo_dict = {}   
+    port_servo_dict = {}
+    port_used_dict = {}
     for servo in dxl_data_list[0]:
         port_servo_dict[servo] = port_hand_list[0]
+        port_used_dict[servo] = 0
     for servo in dxl_data_list[1]:
         port_servo_dict[servo] = port_hand_list[1]
+        port_used_dict[servo] = 1
     for servo in dxl_data_list[2]:
         port_servo_dict[servo] = port_hand_list[2]
-
-def CorrectPortHandler(servoID):
-    out_port_handler = None
-    if (servoID == 1) or (servoID == 2) or (servoID == 3) or (servoID == 4): # Limb #1
-        out_port_handler = 0
-    elif (servoID == 5) or (servoID == 6) or (servoID == 7) or (servoID == 8): # Limb #2
-        out_port_handler = 0
-    elif (servoID == 9) or (servoID == 10) or (servoID == 11) or (servoID == 12): # Limb #3
-        out_port_handler = 1
-    elif (servoID == 13) or (servoID == 14) or (servoID == 15) or (servoID == 16): # Limb #4
-        out_port_handler = 1
-    elif (servoID == 17) or (servoID == 18): # Limb #5
-        out_port_handler = 2
-    elif (servoID == 19) or (servoID == 20) or (servoID == 21) or (servoID == 22): # Limb #6
-        out_port_handler = 2
-    elif (servoID == 23) or (servoID == 24): # Limb #7
-        out_port_handler = 2
-    else:
-        print("The correct port handler can not be identified because the servo ID isn't recognized. Please fix and try again.")
-    return out_port_handler
+        port_used_dict[servo] = 2
+    return port_servo_dict, port_used_dict
