@@ -642,7 +642,10 @@ def Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix
                 Min_Position_Limit = 1024
             MaxMinLimit = (Max_Position_Limit, Min_Position_Limit)
             port_used = port_used_dict[ID]
-            NewServo = Servo(ID,port_used,PositionsMatrix[ID-1][:],SpeedMatrix[ID-1][:],MaxMinLimit)
+            if (ID >= 1) and (ID <= 16):
+                NewServo = Servo(ID,port_used,PositionsMatrix[ID-1][:],SpeedMatrix[ID-1][:],MaxMinLimit)
+            elif (ID >= 17) and (ID <= 24):
+                NewServo = Servo(ID,port_used,2048,config_array[17],MaxMinLimit)
             print("Servo #%d has been digitally created." % (NewServo.ID))
             ServoDictionary[ID] = NewServo
     return ServoDictionary 
@@ -695,6 +698,125 @@ def Create_DigitalBody(LimbDictionary):
     else:
         print("Not all limbs are registered as being connected. Body can not be digitally assembled. Please fix and try again.")
     return WholeBody
+
+def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler):
+    if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
+        ports_used = [0, 0, 0]
+        port_0_count = 0
+        port_0_list = []
+        port_1_count = 0
+        port_1_list = []
+        port_2_count = 0
+        port_2_list = []
+        for each_servo in BODY_LENGTH:
+            if (ServosDictionary[each_servo].port_used == 0):
+                port_0_count += 1
+                port_0_list.append(each_servo)
+                ports_used[0] = 1
+            elif (ServosDictionary[each_servo].port_used == 1):
+                port_1_count += 1
+                port_1_list.append(each_servo)
+                ports_used[1] = 1
+            elif (ServosDictionary[each_servo].port_used == 2):
+                port_2_count += 1
+                port_2_list.append(each_servo)
+                ports_used[2] = 1
+        if port_0_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
+        if port_1_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
+        if port_2_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
+        GoalVelocity = []
+        GoalPosition = []
+        # Add parameters for Velocity and Position change commands
+        for index, each_servo in enumerate(BODY_LENGTH):
+            GoalVelocity.append(FormatSendData(int(ServosDictionary[each_servo].Speeds)))
+            GoalPosition.append(FormatSendData(ServosDictionary[each_servo].Positions))
+            if each_servo in port_0_list:
+                dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_1_list:
+                dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_2_list:
+                dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return
+            else:
+                print('Error in servo list. Please fix and try again.')
+        if ports_used[0] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_3.clearParam()
+        if ports_used[0] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_3.clearParam()
+    else: 
+        print("Neck, Spine, or Tail have not been constructed. Please check and try again.")
+        quit()
+    return
 
 def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packet_handler, stride_numbers, record_array, start_time):
     ports_used = [0, 0, 0]
@@ -1698,28 +1820,17 @@ def Write_Doc(record_array, out_data):
         print("Data Not Recorded.")
     return
 
-def CleanUp(Obj_list,port_hand_list,packetHandler):
-    for each_servo in Obj_list[0].values():
-        if (each_servo.ID >=1) and (each_servo.ID<=8):
-            each_servo.ToggleTorque(0,port_hand_list[0],packetHandler)
-        elif (each_servo.ID >=9) and (each_servo.ID <= 16):
-            each_servo.ToggleTorque(0,port_hand_list[1],packetHandler)
-        elif (each_servo.ID >= 17) and (each_servo.ID <= 24):
-            each_servo.ToggleTorque(0,port_hand_list[2],packetHandler)
-    if len(Obj_list) == 3:
-        Obj_list[2].__del__()
-        for each_limb in Obj_list[1].values():
-            each_limb.__del__()
-        for each_servo in Obj_list[0].values():
-            each_servo.__del__()
-    elif len(Obj_list) == 2:
-        for each_limb in Obj_list[1].values():
-            each_limb.__del__()
-        for each_servo in Obj_list[0].values():
-            each_servo.__del__()
-    elif len(Obj_list) == 1:
-        for each_servo in Obj_list[0].values():
-            each_servo.__del__()
+def CleanUp(ServosDictionary,port_hand_list):
+
+    for each_servo in ServosDictionary.values():
+        if (each_servo.port_used == 0):
+            each_servo.ToggleTorque(0,port_hand_list[0])
+        elif (each_servo.port_used == 1):
+            each_servo.ToggleTorque(0,port_hand_list[1])
+        elif (each_servo.port_used == 2):
+            each_servo.ToggleTorque(0,port_hand_list[2])
+        each_servo.__del__()
+
     for each_port_obj in port_hand_list:
         if each_port_obj != 0:
             each_port_obj.closePort()

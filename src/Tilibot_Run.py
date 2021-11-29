@@ -117,6 +117,11 @@ elif confirmed_action[0] == 4: # Move Single Servo
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
 elif confirmed_action[0] == 5: # Move Numerous Servos
+    if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
+        for each_spine_servo in BODY_LENGTH_LIMB_IDS:
+            ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
+            ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
+        StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler)
     for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo])
         ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
@@ -131,5 +136,5 @@ elif confirmed_action[0] == 5: # Move Numerous Servos
 
 print("Shutting down Tilibot. Please press enter.")
 getch()
-CleanUp(Obj_list,port_hand_list,packetHandler)
+CleanUp(ServosDictionary,port_hand_list)
 ShutDown()
