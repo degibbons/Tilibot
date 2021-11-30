@@ -118,10 +118,13 @@ elif confirmed_action[0] == 4: # Move Single Servo
         Write_Doc(record_array,out_data)
 elif confirmed_action[0] == 5: # Move Numerous Servos
     if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
-        for each_spine_servo in BODY_LENGTH_LIMB_IDS:
+        for each_spine_servo in BODY_LENGTH:
             ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
             ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
+            print("#############################################################")
+        print("Straightening Spine - ")
         StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler)
+        print("Spine Straightened. Moving to Legs.")
     for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo])
         ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])

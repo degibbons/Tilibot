@@ -592,6 +592,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride):
     return newSpeeds
     
 def Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix):
+    
     ServoDictionary = {}
     for ID, connected_servo in enumerate(config_array[5]):
         if connected_servo == True:
@@ -700,7 +701,11 @@ def Create_DigitalBody(LimbDictionary):
     return WholeBody
 
 def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler):
+
     if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
+        port_hand_list[0].openPort()
+        port_hand_list[1].openPort()
+        port_hand_list[2].openPort()
         ports_used = [0, 0, 0]
         port_0_count = 0
         port_0_list = []

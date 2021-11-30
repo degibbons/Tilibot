@@ -119,6 +119,9 @@ def Packet_Port_Setup(config_array):
     return portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler
 
 def PingServos(port_hand_list,packet_handler):
+    print(port_hand_list[0].is_using)
+    print(port_hand_list[1].is_using)
+    print(port_hand_list[2].is_using)
     dxl_port_list_1 = []
     dxl_port_list_2 = []
     dxl_port_list_3 = []
