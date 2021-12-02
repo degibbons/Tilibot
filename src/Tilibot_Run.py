@@ -50,61 +50,24 @@ preprocessed_positions = ReadServoAngles(config_array[1])
 print("Angle .CSV data read.")
 PositionsMatrix = PostProcessPositions(preprocessed_positions)
 print("Positions Matrix Created.")
-SpeedMatrix = DetermineSpeeds(config_array[3],PositionsMatrix,config_array[2])
+SpeedMatrix = DetermineSpeeds(config_array[3],PositionsMatrix,config_array[2],config_array)
 print("Speeds Calculated.")
 
 Obj_list = []
-ServosDictionary = Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix)
+ServosDictionary = Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix,config_array[32])
 Obj_list.append(ServosDictionary)
 
 # Limb Objects may not be necessary 
 if any(config_array[6]):
-    LimbDictionary = Create_DigitalLimbs(config_array,ServosDictionary)
+    LimbDictionary = Create_DigitalLimbs(config_array[6],ServosDictionary)
     Obj_list.append(LimbDictionary)
 
 # Body Object may not be necessary
-if config_array[7] == True:
+if all(limb_present == True for limb_present in config_array[7]):
     TilibotBody = Create_DigitalBody(LimbDictionary)
     Obj_list.append(TilibotBody)
 
-if confirmed_action[0] == 1: # Move Whole Body
-    TilibotBody.InitialSetup()
-    TilibotBody.ToggleTorque(1)
-    speed_list = TilibotBody.DetermineVelocities(-1,config_array[17])
-    TilibotBody.SetLimbVelocity(speed_list,port_hand_list,packetHandler)
-    TilibotBody.MoveSpineHome(config_array[17],port_hand_list,packetHandler)
-    TilibotBody.MoveLegsHome(config_array[17],port_hand_list,packetHandler)
-    print("Tilibot Body has been moved to Home Position.")
-    print("Please press enter when you are ready to begin.")
-    getch()
-    out_data = TilibotBody.ContinuousLegsMove(stride_numbers, record_array)
-    if record_array[0] == True:
-        Write_Doc(record_array,out_data)
-# elif confirmed_action[0] == 2: # Move Single Limb
-#     limb_to_move = LimbDictionary[confirmed_action[1]]
-#     limb_to_move.InitialSetup()
-#     limb_to_move.ToggleTorque(1)
-#     limb_to_move.MoveHome(config_array[17])
-#     print("Limb has been moved to Home Position.")
-#     print("Please press enter when you are ready to begin.")
-#     getch()
-#     start_time = time.time()
-#     out_data = limb_to_move.ContinuousMove(port_hand_list,packetHandler,stride_numbers, record_array, start_time)
-#     if record_array[0] == True:
-#         Write_Doc(record_array,out_data)
-# elif confirmed_action[0] == 3: # Move Numerous Limbs
-#     for each_limb in confirmed_action[1]:
-#         LimbDictionary[each_limb].InitialSetup(port_servo_dict)
-#         LimbDictionary[each_limb].ToggleTorque(1,port_servo_dict)
-#         LimbDictionary[each_limb].MoveHome(config_array[17])
-#     print("Limb has been moved to Home Position.")
-#     print("Please press enter when you are ready to begin.")
-#     getch()
-#     start_time = time.time()
-#     out_data = MoveNumerousLimbs(confirmed_action[1],LimbDictionary,ServosDictionary,port_hand_list,port_servo_dict,packetHandler,stride_numbers,record_array,start_time)
-#     if record_array[0] == True:
-#         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 4: # Move Single Servo
+if confirmed_action[0] == 1: # Move Single Servo
     servo_to_move = ServosDictionary[confirmed_action[1]]
     servo_to_move.InitialSetup(port_servo_dict[servo_to_move.ID])
     servo_to_move.ToggleTorque(1,port_servo_dict[servo_to_move.ID])
@@ -116,15 +79,16 @@ elif confirmed_action[0] == 4: # Move Single Servo
     out_data = servo_to_move.ContinuousMove(port_servo_dict[servo_to_move.ID], stride_numbers, record_array, start_time)
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
-elif confirmed_action[0] == 5: # Move Numerous Servos
+elif confirmed_action[0] == 2: # Move Numerous Servos
     if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
-        for each_spine_servo in BODY_LENGTH:
-            ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
-            ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
-            print("#############################################################")
-        print("Straightening Spine - ")
-        StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler)
-        print("Spine Straightened. Moving to Legs.")
+        if (config_array[28] == True) and (config_array[29] == True) and (config_array[30] == True):
+            for each_spine_servo in BODY_LENGTH:
+                ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
+                ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
+                print("#############################################################")
+            print("Straightening Spine - ")
+            StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler,config_array[32])
+            print("Spine Straightened. Moving to Legs.")
     for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo])
         ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
@@ -133,7 +97,8 @@ elif confirmed_action[0] == 5: # Move Numerous Servos
     print("Please press enter when you are ready to begin.")
     getch()
     start_time = time.time()
-    out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,port_servo_dict,packetHandler,stride_numbers,record_array, start_time)
+    out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,port_servo_dict,
+        packetHandler,stride_numbers,record_array, start_time,config_array[32])
     if record_array[0] == True:
         Write_Doc(record_array,out_data)
 
