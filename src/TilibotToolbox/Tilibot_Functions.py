@@ -42,7 +42,7 @@ def read_config_file(Config_Yaml_File): # Read the configuration yaml file and e
         stride_amount = config_data['Stride-Amount']                    #4       Read the amount of desired strides one run should make
         connected_servos = config_data['Servos-Connected']              #5       Read in as a list which servos are connected
         connected_limbs = config_data['Limbs-Connected']                #6       Read in as a list which limbs are connected
-        connected_sensors = config_data['Whole-Body-Sensors-Connected'] #7       Read in if the body sensors are connected or not
+        connected_sensors = config_data['Body-Sensors-Connected'] #7       Read in if the body sensors are connected or not
         forelimb_stance_time = config_data['Forelimb-Stance']           #8       Read in the time duration for stance in the forelimbs
         forelimb_swing_time = config_data['Forelimb-Swing']             #9       Read in the time duration for swing in the forelimbs
         hindlimb_stance_time = config_data['Hindlimb-Stance']           #10      Read in the time duration for stance in the hindlimbs
@@ -94,14 +94,8 @@ def check_config_file(config_array):
     for y in config_array[6]:
         if not isinstance(y,bool):
             limb_all_bool = False
-    move_limb_number = len(config_array[12])
     move_servo_number = len(config_array[16])
-    limbs_proper_ints = True
     servos_proper_ints = True
-    if move_limb_number > 0:
-        for a in config_array[12]:
-            if (not isinstance(a, int)) or (a <= 0):
-                limbs_proper_ints = False
     if move_servo_number > 0:
         for b in config_array[16]:
             if (not isinstance(b, int)) or (b <= 0):
@@ -765,42 +759,42 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 # Syncwrite goal velocity
                 dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_1.clearParam()
             if ports_used[1] == 1:
                 # Syncwrite goal velocity
                 dxl_comm_result = groupSyncWriteVEL_2.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_2.clearParam()
             if ports_used[2] == 1:
                 # Syncwrite goal velocity
                 dxl_comm_result = groupSyncWriteVEL_3.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_3.clearParam()
             if ports_used[0] == 1:
                 # Syncwrite goal position
                 dxl_comm_result = groupSyncWritePOS_1.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_1.clearParam()
             if ports_used[1] == 1:
                 # Syncwrite goal position
                 dxl_comm_result = groupSyncWritePOS_2.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_2.clearParam()
             if ports_used[2] == 1:
                 # Syncwrite goal position
                 dxl_comm_result = groupSyncWritePOS_3.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_3.clearParam()
         else: 
@@ -808,7 +802,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
             quit()
     return
 
-def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packet_handler, stride_numbers, record_array, start_time,DigitalOnly):
+def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time,DigitalOnly):
     if DigitalOnly == True:
         pass
     elif DigitalOnly == False:
@@ -816,24 +810,24 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
         for x in servo_list:
             if any(port_servo_dict[x] == port_hand_list[0] for x in servo_list):
                  # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packet_handler, AddrDict[37], 4)
+                groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packet_handler, AddrDict[36], 4)
-                groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packet_handler, AddrDict[39], 1)
+                groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packetHandler, AddrDict[39], 1)
                 ports_used[0] = 1
             if any(port_servo_dict[x] == port_hand_list[1] for x in servo_list):
                  # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packet_handler, AddrDict[37], 4)
+                groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packet_handler, AddrDict[36], 4)
-                groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packet_handler, AddrDict[39], 1)
+                groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packetHandler, AddrDict[39], 1)
                 ports_used[1] = 1
             if any(port_servo_dict[x] == port_hand_list[2] for x in servo_list):
                 # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packet_handler, AddrDict[37], 4)
+                groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packet_handler, AddrDict[36], 4)
-                groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packet_handler, AddrDict[39], 1)
+                groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packetHandler, AddrDict[39], 1)
                 ports_used[2] = 1
     
         port_0_count = 0
@@ -915,42 +909,42 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Veloctiy:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_1.clearParam()
                 if ports_used[1] == 1:
                     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_2.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Velocity:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_2.clearParam()
                 if ports_used[2] == 1:
                     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_3.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Velocity:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_3.clearParam()
                 if ports_used[0] == 1:
                     # Syncwrite goal position
                     dxl_comm_result = groupSyncWritePOS_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Position:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_1.clearParam()
                 if ports_used[1] == 1:
                     # Syncwrite goal position
                     dxl_comm_result = groupSyncWritePOS_2.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Position:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_2.clearParam()
                 if ports_used[2] == 1:
                     # Syncwrite goal position
                     dxl_comm_result = groupSyncWritePOS_3.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                        print("%s - Position:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_3.clearParam()
                 for each_servo in ServosDictionary.keys():
@@ -965,15 +959,15 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                     if ports_used[0] == 1:
                         dxl_comm_result = groupSyncRead_Moving_1.txRxPacket()
                         if dxl_comm_result != COMM_SUCCESS:
-                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                            print("%s - Moving Value:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
                     if ports_used[1] == 1:
                         dxl_comm_result = groupSyncRead_Moving_2.txRxPacket()
                         if dxl_comm_result != COMM_SUCCESS:
-                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                            print("%s - Moving Value:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
                     if ports_used[2] == 1:
                         dxl_comm_result = groupSyncRead_Moving_3.txRxPacket()
                         if dxl_comm_result != COMM_SUCCESS:
-                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                            print("%s - Moving Value:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
                     index_1 = 0
                     index_2 = 0
                     index_3 = 0 
@@ -1008,49 +1002,49 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                 if ports_used[0] == 1:
                                     if record_array[6] == True:
                                         # Create Current Reader
-                                        groupSyncRead_Current_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[42],2)
+                                        groupSyncRead_Current_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[42],2)
                                         port_1_Current = []
                                         readers_exist = True
                                     if record_array[7] == True:
                                         # Create Voltage Reader
-                                        groupSyncRead_Voltage_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[47],2)
+                                        groupSyncRead_Voltage_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[47],2)
                                         port_1_Voltage = []
                                         readers_exist = True
                                     if record_array[8] == True:
                                         # Create Temperature Reader
-                                        groupSyncRead_Temperature_1 = GroupSyncRead(port_hand_list[0],packet_handler,AddrDict[48],1)
+                                        groupSyncRead_Temperature_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[48],1)
                                         port_1_Temperature = []
                                         readers_exist = True
                                 if ports_used[1] == 1:
                                     if record_array[6] == True:
                                         # Create Current Reader
-                                        groupSyncRead_Current_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[42],2)
+                                        groupSyncRead_Current_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[42],2)
                                         port_2_Current = []
                                         readers_exist = True
                                     if record_array[7] == True:
                                         # Create Voltage Reader
-                                        groupSyncRead_Voltage_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[47],2)
+                                        groupSyncRead_Voltage_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[47],2)
                                         port_2_Voltage = []
                                         readers_exist = True
                                     if record_array[8] == True:
                                         # Create Temperature Reader
-                                        groupSyncRead_Temperature_2 = GroupSyncRead(port_hand_list[1],packet_handler,AddrDict[48],1)
+                                        groupSyncRead_Temperature_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[48],1)
                                         port_2_Temperature = []
                                         readers_exist = True
                                 if ports_used[2] == 1:
                                     if record_array[6] == True:
                                         # Create Current Reader
-                                        groupSyncRead_Current_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[42],2)
+                                        groupSyncRead_Current_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[42],2)
                                         port_3_Current = []
                                         readers_exist = True
                                     if record_array[7] == True:
                                         # Create Voltage Reader
-                                        groupSyncRead_Voltage_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[47],2)
+                                        groupSyncRead_Voltage_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[47],2)
                                         port_3_Voltage = []
                                         readers_exist = True
                                     if record_array[8] == True:
                                         # Create Temperature Reader
-                                        groupSyncRead_Temperature_3 = GroupSyncRead(port_hand_list[2],packet_handler,AddrDict[48],1)
+                                        groupSyncRead_Temperature_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[48],1)
                                         port_3_Temperature = []
                                         readers_exist = True
                             if readers_exist == True:
@@ -1082,7 +1076,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present current
                                         dxl_comm_result = groupSyncRead_Current_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_front_servo in port_0_list:
                                             if each_front_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1098,7 +1092,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present current
                                         dxl_comm_result = groupSyncRead_Current_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_back_servo in port_1_list:
                                             if each_back_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1114,7 +1108,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present current
                                         dxl_comm_result = groupSyncRead_Current_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_bodyln_servo in port_2_list:
                                             if each_bodyln_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1131,7 +1125,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present voltage
                                         dxl_comm_result = groupSyncRead_Voltage_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_front_servo in port_0_list:
                                             if each_front_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1147,7 +1141,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present voltage
                                         dxl_comm_result = groupSyncRead_Voltage_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_back_servo in port_1_list:
                                             if each_back_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1163,7 +1157,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present voltage
                                         dxl_comm_result = groupSyncRead_Voltage_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_bodyln_servo in port_2_list:
                                             if each_bodyln_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1180,7 +1174,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present temperature
                                         dxl_comm_result = groupSyncRead_Temperature_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_front_servo in port_0_list:
                                             if each_front_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1196,7 +1190,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present temperature
                                         dxl_comm_result = groupSyncRead_Temperature_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_back_servo in port_1_list:
                                             if each_back_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
@@ -1212,7 +1206,7 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                                         # Syncread present temperature
                                         dxl_comm_result = groupSyncRead_Temperature_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
-                                            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
                                         for each_bodyln_servo in port_2_list:
                                             if each_bodyln_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
