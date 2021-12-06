@@ -68,8 +68,8 @@ Output-File-Directory: /home/pi/TilibotToolbox/out_data/                        
 ##
 
 # Output Information (Check all that apply) 
-Position: Yes                                                                                       #20
-Speed: Yes                                                                                          #21
+Position: No                                                                                       #20
+Speed: No                                                                                          #21
 Time: No                                                                                            #22
 Position-Index: No                                                                                  #23
 Stride-Count: No                                                                                    #24
