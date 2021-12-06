@@ -63,9 +63,9 @@ if any(config_array[6]):
     Obj_list.append(LimbDictionary)
 
 # Body Object may not be necessary
-if all(limb_present == True for limb_present in config_array[7]):
-    TilibotBody = Create_DigitalBody(LimbDictionary)
-    Obj_list.append(TilibotBody)
+#if all(limb_present == True for limb_present in config_array[7]):
+#    TilibotBody = Create_DigitalBody(LimbDictionary)
+#    Obj_list.append(TilibotBody)
 
 if confirmed_action[0] == 1: # Move Single Servo
     servo_to_move = ServosDictionary[confirmed_action[1]]
@@ -97,9 +97,15 @@ elif confirmed_action[0] == 2: # Move Numerous Servos
     print("Servos have been moved to Home Position.")
     print("Please press enter when you are ready to begin.")
     getch()
+    print("*********************************************************")
     start_time = time.time()
     out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,port_servo_dict,
         packetHandler,stride_numbers,record_array, start_time,config_array[32])
+    record_time = time.time()
+    end_time = record_time - start_time
+    print("*********************************************************")
+    print("End Time: %f" %(end_time))
+    print("*********************************************************")
     if config_array[32] == False:
         if record_array[0] == True:
             Write_Doc(record_array,out_data)
