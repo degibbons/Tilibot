@@ -118,34 +118,34 @@ def Packet_Port_Setup(config_array):
 
     return portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler
 
-def PingServos(port_hand_list,packet_handler):
-    print(port_hand_list[0].is_using)
-    print(port_hand_list[1].is_using)
-    print(port_hand_list[2].is_using)
+def PingServos(port_hand_list,packetHandler):
     dxl_port_list_1 = []
     dxl_port_list_2 = []
     dxl_port_list_3 = []
     if port_hand_list[0] != 0:
+        port_hand_list[0].openPort()
         # Try to broadcast ping the Dynamixel
-        dxl_data_list_1, dxl_comm_result = packet_handler.broadcastPing(port_hand_list[0])
+        dxl_data_list_1, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[0])
         if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
             print("Broadcast Issue for Port #1")
         time.sleep(1)
         # Close port
         port_hand_list[0].closePort() 
     if port_hand_list[1] != 0:
-        dxl_data_list_2, dxl_comm_result = packet_handler.broadcastPing(port_hand_list[1])
+        port_hand_list[1].openPort()
+        dxl_data_list_2, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[1])
         if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
             print("Broadcast Issue for Port #2")
         time.sleep(1)
         # Close port
         port_hand_list[1].closePort()
     if port_hand_list[2] != 0:
-        dxl_data_list_3, dxl_comm_result = packet_handler.broadcastPing(port_hand_list[2])
+        port_hand_list[2].openPort()
+        dxl_data_list_3, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[2])
         if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % packet_handler.getTxRxResult(dxl_comm_result))
+            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
             print("Broadcast Issue for Port #3")
         time.sleep(1)
         # Close port
