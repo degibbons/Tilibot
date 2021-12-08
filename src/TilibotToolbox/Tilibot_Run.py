@@ -69,7 +69,7 @@ if any(config_array[6]):
 
 if confirmed_action[0] == 1: # Move Single Servo
     servo_to_move = ServosDictionary[confirmed_action[1]]
-    servo_to_move.InitialSetup(port_servo_dict[servo_to_move.ID])
+    servo_to_move.InitialSetup(port_servo_dict[servo_to_move.ID],config_array[31])
     servo_to_move.ToggleTorque(1,port_servo_dict[servo_to_move.ID])
     servo_to_move.MoveHome(config_array[17],port_servo_dict[servo_to_move.ID])
     print("Servo has been moved to Home Position.")
@@ -87,15 +87,15 @@ elif confirmed_action[0] == 2: # Move Numerous Servos
                 ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
                 ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
                 print("#############################################################")
-            print("Straightening Spine - ")
+            print("\nStraightening Spine - ")
             StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler,config_array[32])
-            print("Spine Straightened. Moving to Legs.")
+            print("Spine Straightened. Moving to Legs.\n")
     for each_servo in confirmed_action[1]:
-        ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo])
+        ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo],config_array[31])
         ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
         ServosDictionary[each_servo].MoveHome(config_array[17],port_servo_dict[each_servo])
     print("Servos have been moved to Home Position.")
-    print("Please press enter when you are ready to begin.")
+    print("Please press enter when you are ready to begin.\n")
     getch()
     print("*********************************************************")
     start_time = time.time()
@@ -103,9 +103,9 @@ elif confirmed_action[0] == 2: # Move Numerous Servos
         packetHandler,stride_numbers,record_array, start_time,config_array[32])
     record_time = time.time()
     end_time = record_time - start_time
-    print("*********************************************************")
+    print("\n*********************************************************")
     print("End Time: %f" %(end_time))
-    print("*********************************************************")
+    print("*********************************************************\n")
     if config_array[32] == False:
         if record_array[0] == True:
             Write_Doc(record_array,out_data)
