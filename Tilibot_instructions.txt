@@ -1,0 +1,73 @@
+TILIBOT RUN INSTRUCTIONS:
+
+Turn on Raspberry Pi
+(Login: pi)
+(password:Ti1iqua$)
+
+Connect the power jacks to each power hub where the servos and U2D2 boards are connected to.
+NOTE: Make sure all lights on the power bricks are lit up. If not, finagle with the cables connected to the brick until the light turns and stays on
+Then plug in the USB ends of the U2D2 boards to the Raspberry Pi.
+It's not entirely necessary but it does make it easier to identify problems if they are connected as such:
+Front 2 Limbs - Plug in First
+Back 2 Limbs - Plug in Second
+Spine - Plug in Third
+
+Press:
+> Ctrl + Alt + t
+(This should open up the terminal)
+(If this doesn't work, the terminal should be either on the Tab Bar at the top of the screen, or in the Start Menu)
+
+NOTE: When typing in some of the following commands, hit Tab when in the middle of typing for auto-Complete (Speeds things up)
+
+Type the following:
+> cd TilibotToolbox/src/TilibotToolbox/
+> (Press Enter)
+
+Type the following:
+> python3.8 Tilibot_Run.py
+> (Press Enter)
+(The 3.8 part is important, as other python versions do not work as well, or in some cases, at all)
+
+The robot should start working.
+Each servo should be digitally recreated.
+The limbs should stifen and move to home positions.
+The terminal will then prompt you to press 'Enter' to begin running.
+Do that.
+
+The Robot will run (Hopefully correctly)
+At the end, it will prompt you to press 'Enter' to end the program and turn the torque of all the servos off (the robot will fall to the floor, Damn you gravity!)
+
+NOTE: There will be communication issues that pop up on the terminal
+Most of these are not a problem so long as the robot appears to run correctly
+(There are features that are not fully operational at the moment, like servo recording stats)
+The most important thing to take note of is, when the program is first run, if all 24 servos are detected and subsequently created digitally.
+****************************************************************************************************************
+To Edit Specific Stats...
+Type the following before running the program:
+> nano Tilibot_Configuration File.yml
+> (Press Enter)
+
+You will come up on a text edit screen on your terminal
+
+Using the arrow keys, move up and down on the screen to the field you want to edit (e.g. Stride-Amount, Stride-Time, or Ratio-Time)
+
+Delete the current value on the field and replace it with the desired input
+
+Type the following:
+> Ctrl + x 
+> y
+> (Press Enter)
+
+You've now officially edited the configuration file with the proper details
+Run the program as described above.
+****************************************************************************************************************
+If any servos torque out or have any problems (other than their triple pin wires disconnecting)
+First try disconnecting and reconnecting the USB ends of the U2D2s plugged into the Raspberry Pi. If that doesn't work, then
+instead of Tilibot_Run.py, run the following instead:
+> python3.8 Tilibot_RebootReset.py
+
+This will allow you to Reboot any and all servos (essentially turn them off and on)
+
+In more dire situations, the Reset should be used, essentially reseting the servos back to factory settings save for a few options as described when run.
+After they've been rebooted (or reset), you should be able to run Tilibot_Run as described above
+
