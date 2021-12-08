@@ -20,7 +20,7 @@ class Servo:
         self.packetHandler = PacketHandler(PROTOCOL_VERSION)
         self.port_used = port_used
 
-    def InitialSetup(self,portHandler): 
+    def InitialSetup(self,portHandler,silenceYesNo): 
         print("#############################################################")
         print("Servo #%0.3d" %(self.ID))
         if self.digital_only == False:
@@ -32,7 +32,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Drive mode set to: %03d" %(self.ID, DRIVE_MODE_VEL_BASED))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Drive mode set to: %03d" %(self.ID, DRIVE_MODE_VEL_BASED))
 
             # time.sleep(PreferedDelay)
 
@@ -43,7 +44,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Operating mode set to: %03d" %(self.ID, OPERATING_JOINT_POSITION_MODE))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Operating mode set to: %03d" %(self.ID, OPERATING_JOINT_POSITION_MODE))
 
             # time.sleep(PreferedDelay)
 
@@ -54,7 +56,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Acceleration limit set to: %03d" %(self.ID, ACCELERATION_LIMIT_M))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Acceleration limit set to: %03d" %(self.ID, ACCELERATION_LIMIT_M))
 
             # time.sleep(PreferedDelay)
 
@@ -65,7 +68,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Max position limit set to: %03d" %(self.ID, self.MaxMin[0]))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Max position limit set to: %03d" %(self.ID, self.MaxMin[0]))
 
             # time.sleep(PreferedDelay)
 
@@ -76,7 +80,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Min position limit set to: %03d" %(self.ID, self.MaxMin[1]))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Min position limit set to: %03d" %(self.ID, self.MaxMin[1]))
 
             # time.sleep(PreferedDelay)
 
@@ -87,7 +92,8 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
-                print("[ID:%03d] Moving accuracy set to high: %03d" %(self.ID, MOVING_THRESHOLD_ACCURACY_H))
+                if silenceYesNo == False:
+                    print("[ID:%03d] Moving accuracy set to high: %03d" %(self.ID, MOVING_THRESHOLD_ACCURACY_H))
 
             # time.sleep(PreferedDelay)
         elif self.digital_only == True:
