@@ -760,6 +760,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Velocity:Port 1")
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_1.clearParam()
             if ports_used[1] == 1:
@@ -767,6 +768,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWriteVEL_2.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Velocity:Port 2")
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_2.clearParam()
             if ports_used[2] == 1:
@@ -774,6 +776,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWriteVEL_3.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Velocity:Port 3")
                 # Clear syncwrite parameter storage
                 groupSyncWriteVEL_3.clearParam()
             if ports_used[0] == 1:
@@ -781,6 +784,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWritePOS_1.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Position:Port 1")
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_1.clearParam()
             if ports_used[1] == 1:
@@ -788,6 +792,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWritePOS_2.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Position:Port 2")
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_2.clearParam()
             if ports_used[2] == 1:
@@ -795,6 +800,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                 dxl_comm_result = groupSyncWritePOS_3.txPacket()
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                    print("Position:Port 3")
                 # Clear syncwrite parameter storage
                 groupSyncWritePOS_3.clearParam()
         else: 
@@ -1323,7 +1329,6 @@ def Write_Doc(record_array, out_data):
     return
 
 def CleanUp(ServosDictionary,port_hand_list):
-
     for each_servo in ServosDictionary.values():
         if (each_servo.port_used == 0):
             each_servo.ToggleTorque(0,port_hand_list[0])
