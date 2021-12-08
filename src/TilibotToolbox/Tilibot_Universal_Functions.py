@@ -125,6 +125,7 @@ def PingServos(port_hand_list,packetHandler):
     if port_hand_list[0] != 0:
         port_hand_list[0].openPort()
         # Try to broadcast ping the Dynamixel
+        print("Pinging Port #1")
         dxl_data_list_1, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[0])
         if dxl_comm_result != COMM_SUCCESS:
             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
@@ -134,6 +135,7 @@ def PingServos(port_hand_list,packetHandler):
         port_hand_list[0].closePort() 
     if port_hand_list[1] != 0:
         port_hand_list[1].openPort()
+        print("Pinging Port #2")
         dxl_data_list_2, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[1])
         if dxl_comm_result != COMM_SUCCESS:
             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
@@ -143,6 +145,7 @@ def PingServos(port_hand_list,packetHandler):
         port_hand_list[1].closePort()
     if port_hand_list[2] != 0:
         port_hand_list[2].openPort()
+        print("Pinging Port #3")
         dxl_data_list_3, dxl_comm_result = packetHandler.broadcastPing(port_hand_list[2])
         if dxl_comm_result != COMM_SUCCESS:
             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
