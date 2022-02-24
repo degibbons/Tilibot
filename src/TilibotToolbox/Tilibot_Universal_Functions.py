@@ -25,7 +25,7 @@ else:
 def FormatSendData(rawData):
     return [DXL_LOBYTE(DXL_LOWORD(rawData)), DXL_HIBYTE(DXL_LOWORD(rawData)), DXL_LOBYTE(DXL_HIWORD(rawData)), DXL_HIBYTE(DXL_HIWORD(rawData))]
 
-def Packet_Port_Setup(config_array):
+def Packet_Port_Setup(baud_rate_in):
     # Initialize PortHandler instance
     # Set the port path
     # Get methods and members of PortHandlerLinux or PortHandlerWindows
@@ -67,7 +67,7 @@ def Packet_Port_Setup(config_array):
     if ports_used[0] == 1:
         if portHandler_1.openPort():
             print("Succeeded to open the port (#1) - ACTUAL")
-            if portHandler_1.setBaudRate(config_array[0]):
+            if portHandler_1.setBaudRate(baud_rate_in):
                 print("Succeeded to change the baudrate for port 1")
             else:
                 print("Failed to change the baudrate - 1")
@@ -82,7 +82,7 @@ def Packet_Port_Setup(config_array):
     if ports_used[1] == 1:
         if portHandler_2.openPort():
             print("Succeeded to open the port (#2) - ACTUAL")
-            if portHandler_2.setBaudRate(config_array[0]):
+            if portHandler_2.setBaudRate(baud_rate_in):
                 print("Succeeded to change the baudrate for port 2")
             else:
                 print("Failed to change the baudrate - 2")
@@ -96,7 +96,7 @@ def Packet_Port_Setup(config_array):
     if ports_used[2] == 1:
         if portHandler_3.openPort():
             print("Succeeded to open the port (#3) - ACTUAL")
-            if portHandler_3.setBaudRate(config_array[0]):
+            if portHandler_3.setBaudRate(baud_rate_in):
                 print("Succeeded to change the baudrate for port 3")
             else:
                 print("Failed to change the baudrate - 3")
@@ -171,8 +171,6 @@ def PingServos(port_hand_list,packetHandler):
             print("[ID:%03d] Detected" % (dxl_id))
             print("[ID:%03d] model version : %d | firmware version : %d" % (dxl_id, dxl_data_list_3.get(dxl_id)[0], dxl_data_list_3.get(dxl_id)[1]))
             dxl_port_list_3.append(dxl_id)
-
-
     dxl_data_list = [dxl_port_list_1, dxl_port_list_2, dxl_port_list_3]
     return dxl_data_list
 
