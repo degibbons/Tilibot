@@ -42,7 +42,7 @@ def read_config_file(Config_Yaml_File): # Read the configuration yaml file and e
         stride_amount = config_data['Stride-Amount']                    #4       Read the amount of desired strides one run should make
         connected_servos = config_data['Servos-Connected']              #5       Read in as a list which servos are connected
         connected_limbs = config_data['Limbs-Connected']                #6       Read in as a list which limbs are connected
-        connected_sensors = config_data['Body-Sensors-Connected'] #7       Read in if the body sensors are connected or not
+        connected_sensors = config_data['Body-Sensors-Connected']       #7       Read in if the body sensors are connected or not
         forelimb_stance_time = config_data['Forelimb-Stance']           #8       Read in the time duration for stance in the forelimbs
         forelimb_swing_time = config_data['Forelimb-Swing']             #9       Read in the time duration for swing in the forelimbs
         hindlimb_stance_time = config_data['Hindlimb-Stance']           #10      Read in the time duration for stance in the hindlimbs
@@ -566,8 +566,9 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
         newSpeeds[each_servo-1][newSpeeds[each_servo-1] == 0] = 1 # 0 sets the speed to the fastest possible, NOT the slowest
     return newSpeeds
     
-def Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix,DigitalOnly):
+def Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix):
     ServoDictionary = {}
+    DigitalOnly = config_array[32]
     for ID, connected_servo in enumerate(config_array[5]):
         if connected_servo == True:
             ID += 1
@@ -730,29 +731,29 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                     dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return
+                        return each_servo
                     dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return
+                        return each_servo
                 elif each_servo in port_1_list:
                     dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return
+                        return each_servo
                     dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return
+                        return each_servo
                 elif each_servo in port_2_list:
                     dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return
+                        return each_servo
                     dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
                     if dxl_addparam_result != True:
                         print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return
+                        return each_servo
                 else:
                     print('Error in servo list. Please fix and try again.')
             if ports_used[0] == 1:
@@ -806,7 +807,7 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
         else: 
             print("Neck, Spine, or Tail have not been constructed. Please check and try again.")
             quit()
-    return
+    return 0
 
 def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time,DigitalOnly):
     if DigitalOnly == True:
@@ -1328,6 +1329,387 @@ def Write_Doc(record_array, out_data):
         print("Data Not Recorded.")
     return
 
+def Move_Spider_Up(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, in_home_speed, DigitalOnly):
+    if DigitalOnly == True:
+        pass
+    elif DigitalOnly == False:
+        ports_used = [0, 0, 0]
+        for used_servo in servo_list:
+            if any(port_servo_dict[used_servo] == port_hand_list[0] for used_servo in servo_list):
+                 # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packetHandler, AddrDict[39], 1)
+                ports_used[0] = 1
+            else:
+                pass
+            if any(port_servo_dict[used_servo] == port_hand_list[1] for used_servo in servo_list):
+                 # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packetHandler, AddrDict[39], 1)
+                ports_used[1] = 1
+            else:
+                pass
+            if any(port_servo_dict[used_servo] == port_hand_list[2] for used_servo in servo_list):
+                # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packetHandler, AddrDict[39], 1)
+                ports_used[2] = 1
+            else:
+                pass
+            
+        port_0_count = 0
+        port_0_list = []
+        port_1_count = 0
+        port_1_list = []
+        port_2_count = 0
+        port_2_list = []
+        for each_servo in servo_list:
+            if (ServosDictionary[each_servo].port_used == 0):
+                port_0_count += 1
+                port_0_list.append(each_servo)
+            elif (ServosDictionary[each_servo].port_used == 1):
+                port_1_count += 1
+                port_1_list.append(each_servo)
+            elif (ServosDictionary[each_servo].port_used == 2):
+                port_2_count += 1
+                port_2_list.append(each_servo)
+    
+        GoalVelocity = []
+        GoalPosition = []
+
+        if ports_used[0] == 1:
+            isStopped_0 = [0] * port_0_count
+        else:
+            isStopped_0 = []
+        if ports_used[1] == 1:
+            isStopped_1 = [0] * port_1_count
+        else:
+            isStopped_1 = []
+        if ports_used[2] == 1:
+            isStopped_2 = [0] * port_2_count
+        else:
+            isStopped_2 = []
+
+        for index, each_servo in enumerate(servo_list):
+            GoalVelocity.append(FormatSendData(int(in_home_speed)))
+            GoalPosition.append(FormatSendData(SPIDER_UP[each_servo]))
+            if each_servo in port_0_list:
+                dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_1_list:
+                dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_2_list:
+                dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-UP addparam position failed" % each_servo)
+                    return
+            else:
+                print('Error in servo list. Please fix and try again.')
+        if ports_used[0] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Veloctiy:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Velocity:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Velocity:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_3.clearParam()
+        if ports_used[0] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Position:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Position:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-UP Position:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_3.clearParam()
+        for each_servo in ServosDictionary.keys():
+            if each_servo in port_0_list:
+                groupSyncRead_Moving_1.addParam(each_servo)
+            elif each_servo in port_1_list:
+                groupSyncRead_Moving_2.addParam(each_servo)
+            elif each_servo in port_2_list:
+                groupSyncRead_Moving_3.addParam(each_servo)
+        while 1:
+            # Syncread Moving Value
+            if ports_used[0] == 1:
+                dxl_comm_result = groupSyncRead_Moving_1.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-UP Moving Value:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            if ports_used[1] == 1:
+                dxl_comm_result = groupSyncRead_Moving_2.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-UP Moving Value:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            if ports_used[2] == 1:
+                dxl_comm_result = groupSyncRead_Moving_3.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-UP Moving Value:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            index_1 = 0
+            index_2 = 0
+            index_3 = 0 
+            for each_servo in ServosDictionary.keys():
+                # Get Dynamixel present Moving value
+                if each_servo in port_0_list:
+                    dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_0[index_1] == 0):
+                        isStopped_0[index_1] = 1
+                    index_1 += 1
+                if each_servo in port_1_list:
+                    dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_1[index_2] == 0):
+                        isStopped_1[index_2] = 1
+                    index_2 += 1
+                if each_servo in port_2_list:
+                    dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_2[index_3] == 0):
+                        isStopped_2[index_3] = 1
+                    index_3 += 1
+            if (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2):
+                pass
+            else:
+                if ports_used[0] == 1:
+                    groupSyncRead_Moving_1.clearParam()
+                if ports_used[1] == 1:
+                    groupSyncRead_Moving_2.clearParam()
+                if ports_used[2] == 1:
+                    groupSyncRead_Moving_3.clearParam()
+                
+            
+def Move_Spider_Down(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, in_home_speed, DigitalOnly):
+    if DigitalOnly == True:
+        pass
+    elif DigitalOnly == False:
+        ports_used = [0, 0, 0]
+        for used_servo in servo_list:
+            if any(port_servo_dict[used_servo] == port_hand_list[0] for used_servo in servo_list):
+                 # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packetHandler, AddrDict[39], 1)
+                ports_used[0] = 1
+            if any(port_servo_dict[used_servo] == port_hand_list[1] for used_servo in servo_list):
+                 # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packetHandler, AddrDict[39], 1)
+                ports_used[1] = 1
+            if any(port_servo_dict[used_servo] == port_hand_list[2] for used_servo in servo_list):
+                # Initialize GroupSyncWrite instance
+                groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
+                # Initialize GroupSyncWrite instance
+                groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
+                groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packetHandler, AddrDict[39], 1)
+                ports_used[2] = 1
+        port_0_count = 0
+        port_0_list = []
+        port_1_count = 0
+        port_1_list = []
+        port_2_count = 0
+        port_2_list = []
+        for each_servo in servo_list:
+            if (ServosDictionary[each_servo].port_used == 0):
+                port_0_count += 1
+                port_0_list.append(each_servo)
+            elif (ServosDictionary[each_servo].port_used == 1):
+                port_1_count += 1
+                port_1_list.append(each_servo)
+            elif (ServosDictionary[each_servo].port_used == 2):
+                port_2_count += 1
+                port_2_list.append(each_servo)
+        GoalVelocity = []
+        GoalPosition = []
+        if ports_used[0] == 1:
+            isStopped_0 = [0] * port_0_count
+        else:
+            isStopped_0 = []
+        if ports_used[1] == 1:
+            isStopped_1 = [0] * port_1_count
+        else:
+            isStopped_1 = []
+        if ports_used[2] == 1:
+            isStopped_2 = [0] * port_2_count
+        else:
+            isStopped_2 = []
+        
+        for index, each_servo in enumerate(servo_list):
+            GoalVelocity.append(FormatSendData(int(in_home_speed)))
+            GoalPosition.append(FormatSendData(SPIDER_DOWN[each_servo]))
+            if each_servo in port_0_list:
+                dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_1_list:
+                dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam position failed" % each_servo)
+                    return
+            elif each_servo in port_2_list:
+                dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam velocity failed" % each_servo)
+                    return
+                dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam position failed" % each_servo)
+                    return
+            else:
+                print('Error in servo list. Please fix and try again.')
+        if ports_used[0] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Veloctiy:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Velocity:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Velocity:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_3.clearParam()
+        if ports_used[0] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Position:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Position:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s - SPIDER-DOWN Position:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_3.clearParam()
+        for each_servo in ServosDictionary.keys():
+            if each_servo in port_0_list:
+                groupSyncRead_Moving_1.addParam(each_servo)
+            elif each_servo in port_1_list:
+                groupSyncRead_Moving_2.addParam(each_servo)
+            elif each_servo in port_2_list:
+                groupSyncRead_Moving_3.addParam(each_servo)
+        while 1:
+            # Syncread Moving Value
+            if ports_used[0] == 1:
+                dxl_comm_result = groupSyncRead_Moving_1.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-DOWN Moving Value:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+            if ports_used[1] == 1:
+                dxl_comm_result = groupSyncRead_Moving_2.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-DOWN Moving Value:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+            if ports_used[2] == 1:
+                dxl_comm_result = groupSyncRead_Moving_3.txRxPacket()
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s - SPIDER-DOWN Moving Value:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+            index_1 = 0
+            index_2 = 0
+            index_3 = 0 
+            for each_servo in ServosDictionary.keys():
+                # Get Dynamixel present Moving value
+                if each_servo in port_0_list:
+                    dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_0[index_1] == 0):
+                        isStopped_0[index_1] = 1
+                    index_1 += 1
+                if each_servo in port_1_list:
+                    dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_1[index_2] == 0):
+                        isStopped_1[index_2] = 1
+                    index_2 += 1
+                if each_servo in port_2_list:
+                    dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
+                    if (dxl_mov == 0) and (isStopped_2[index_3] == 0):
+                        isStopped_2[index_3] = 1
+                    index_3 += 1
+            if (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2):
+                pass
+            else:
+                if ports_used[0] == 1:
+                    groupSyncRead_Moving_1.clearParam()
+                if ports_used[1] == 1:
+                    groupSyncRead_Moving_2.clearParam()
+                if ports_used[2] == 1:
+                    groupSyncRead_Moving_3.clearParam()
+                
+
+def Write_Settings_Doc(Config_Dictionary,filename_for_save):
+    with open(filename_for_save, 'w') as file:
+        yaml.dump(Config_Dictionary, file)
+
 def CleanUp(ServosDictionary,port_hand_list):
     for each_servo in ServosDictionary.values():
         if (each_servo.port_used == 0):
@@ -1337,10 +1719,18 @@ def CleanUp(ServosDictionary,port_hand_list):
         elif (each_servo.port_used == 2):
             each_servo.ToggleTorque(0,port_hand_list[2])
         each_servo.__del__()
-
     for each_port_obj in port_hand_list:
         if each_port_obj != 0:
             each_port_obj.closePort()
+
+def Reset_For_Run(ServosDictionary,port_hand_list):
+    for each_servo in ServosDictionary.values():
+        if (each_servo.port_used == 0):
+            each_servo.ToggleTorque(0,port_hand_list[0])
+        elif (each_servo.port_used == 1):
+            each_servo.ToggleTorque(0,port_hand_list[1])
+        elif (each_servo.port_used == 2):
+            each_servo.ToggleTorque(0,port_hand_list[2])
     
 def ShutDown():
     print("Shutting down system.\n")
