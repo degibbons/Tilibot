@@ -10,6 +10,8 @@ from Tilibot_Classes import *
 from dynamixel_sdk import *
 # from threading import Thread
 
+GUI_or_TERMINAL = 1 # -1 for GUI, +1 for Terminal
+
 if os.name == 'nt': # nt for windows, posix for mac and linux
     import msvcrt
     def getch():
@@ -39,7 +41,7 @@ if config_array[32] == True:
     # DigitalSetup(config_array)
     pass
 elif config_array[32] == False:
-    portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler = Packet_Port_Setup(config_array)
+    portHandler_1, portHandler_2, portHandler_3, portHandler_4, packetHandler = Packet_Port_Setup(config_array[0])
     port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4]
     dxl_data_list = PingServos(port_hand_list,packetHandler)
     port_servo_dict, port_used_dict = Port_Servo_Assign(dxl_data_list,port_hand_list)
@@ -93,6 +95,11 @@ elif confirmed_action[0] == 2: # Move Numerous Servos
     for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo],config_array[31])
         ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
+# Move Servo to Spider Stance
+# Move Servos to Floor and Push Up
+    Move_Spider_Up(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17],config_array[32])
+    Move_Spider_Down(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17], config_array[32])
+    for each_servo in confirmed_action[1]:
         ServosDictionary[each_servo].MoveHome(config_array[17],port_servo_dict[each_servo])
     print("Servos have been moved to Home Position.")
     print("Please press enter when you are ready to begin.\n")
