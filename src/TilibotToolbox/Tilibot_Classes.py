@@ -19,6 +19,7 @@ class Servo:
         self.MaxMin = MaxMinMov
         self.packetHandler = PacketHandler(PROTOCOL_VERSION)
         self.port_used = port_used
+        
 
     def InitialSetup(self,portHandler,silenceYesNo): 
         print("#############################################################")
