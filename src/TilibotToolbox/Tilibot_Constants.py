@@ -1,6 +1,9 @@
 ## Tilibot Constants
 
 # Control table address and Values
+from pickle import NONE
+
+
 ADDR_PRO_TORQUE_ENABLE      = 64               # Control table address is different in Dynamixel model
 ADDR_PRO_GOAL_POSITION      = 116
 ADDR_VELOCITY_LIMIT         = 44            #4
@@ -107,6 +110,44 @@ STRAIGHT_SPINE = 2048
 STRAIGHT_SPEED = 50
 STRAIGHT_SPINE_ARRAY = [STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE]
 STRAIGHT_SPEED_ARRAY = [STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED]
+
+SPIDER_UP = {1:2048,
+            2:2590,
+            3:2048,
+            4:1536,
+            5:2048,
+            6:2590,
+            7:2048,
+            8:1536,
+            9:2048,
+            10:2590,
+            11:2048,
+            12:1536,
+            13:2048,
+            14:2590,
+            15:2048,
+            16:1536}
+
+SPIDER_DOWN = {1:2048,
+            2:2048,
+            3:2048,
+            4:2048,
+            5:2048,
+            6:2048,
+            7:2048,
+            8:2048,
+            9:2048,
+            10:2048,
+            11:2048,
+            12:2048,
+            13:2048,
+            14:2048,
+            15:2048,
+            16:2048}
+
+GUI_or_TERMINAL = 0 # -1 for GUI, +1 for Terminal
+SERVO_IN_QUESTION = None # Used for error detection in GUI
+STOP_VALUE = False # Change to true when attempting to stop the execution
 
 # Selections corresponding to Addresses
 # Data Byte Sizes are Included Next to Trait Name
