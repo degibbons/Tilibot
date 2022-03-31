@@ -14,8 +14,8 @@ import sys
 import csv
 import math
 
-if os.name == 'nt': # nt for windows, posix for mac and linux, Defines getch for user control
-    import msvcrt
+if os.name == 'nt': # nt for windows, posix for mac and linux, Defines getch for user control, makes hitting enter to continue possible
+    import msvcrt   
     def getch():
         return msvcrt.getch().decode()
 else:
@@ -78,157 +78,160 @@ def read_config_file(Config_Yaml_File): # Read the configuration yaml file and e
 
     return config_array
 
-def check_config_file(config_array):
+def check_config_file(config_array,GUI_or_TERMINAL):
     print("Confirming configuration file is properly written...")
     invalidate_value = False
     # Check that Configuration File is filled out correctly
     # That only one action is picked, its corresponding array is filled
     # and every field in the file is filled out correctly
-    servo_count = len(config_array[5])
-    limb_count = len(config_array[6])
-    servo_all_bool = True
-    limb_all_bool = True
-    for x in config_array[5]:
+    servo_count = len(config_array[5]) # Get the amount of servos from the length of the array of connected servos
+    limb_count = len(config_array[6]) # Get the amount of limbs connected from the length of the array of connected limbs
+    servo_all_bool = True # Indicator that all servos in list are booleans and no other type of variable
+    limb_all_bool = True # Indicator that all limbs in list are booleans and no other variable type
+    for x in config_array[5]: # Check if all servos have booleans assigned as their values
         if not isinstance(x,bool):
-            servo_all_bool = False
-    for y in config_array[6]:
+            servo_all_bool = False # Change the value of the check variable if this is not the case
+    for y in config_array[6]: # Check if all limbs have booleans assigned as their values
         if not isinstance(y,bool):
-            limb_all_bool = False
-    move_servo_number = len(config_array[16])
-    servos_proper_ints = True
-    if move_servo_number > 0:
+            limb_all_bool = False # Change the value of the check variable if this is not the case
+    move_servo_number = len(config_array[16]) # Get the amount of servos intended to move from 
+    servos_proper_ints = True # Indicator that all moving servos are integers and no other variable type
+    if move_servo_number > 0: # If the amount of moving servos is greater than 0
         for b in config_array[16]:
-            if (not isinstance(b, int)) or (b <= 0):
-                servos_proper_ints = False
-    valid_home_speed = True
-    if (not isinstance(config_array[17],int)):
-        valid_home_speed = False
-    elif (config_array[17] > 1023) or (config_array[17] < 0):
-        valid_home_speed = False
+            if (not isinstance(b, int)) or (b <= 0): # If the value is not an integer or it's not greater than 0
+                servos_proper_ints = False # Change the value of the check variable if this is not the case
+    valid_home_speed = True # Indicator if the home speed value is an integer and within the valid range
+    if (not isinstance(config_array[17],int)): # If the value is not an int
+        valid_home_speed = False # Change the value of the check variable if this is not the case
+    elif (config_array[17] > 1023) or (config_array[17] < 0): # Check if the value of the variable is within the Dynamixel-established Speed Range
+        valid_home_speed = False # Change the value of the check variable if this is not the case
     
     if (not isinstance(config_array[0],int)) or (config_array[0] <= 0): # Check if baud rate is integer and less than or equal to 0
         print("Baud-Rate input is incorrect format. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[1],str)) or (not os.path.isfile(config_array[1])): # Check if Position Angle File is string and proper file
         print("Position-Angle-File is not a valid String or is not a valid file. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[2],int)) or (config_array[2] <= 0): # Check if Positions per Stride is integer and less than or equal to 0
         print("Positions-Per-Stride is not a valid Integer number, or not the correct format. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[3],float)) or (config_array[3] <= 0): # Check if Stride Time is float and less than or equal to 0
         print("Stride-Time is not a valid Float number, or not the correct format. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[4],int)) or (config_array[0] <= 0): # Check if Stride Amount is integer and less than or equal to 0
         print("Stride-Amount is not a valid Integer number, or not the correct format.. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[5],list)) or (servo_count != 24) or (servo_all_bool == False): # Check if Servos Connected is proper list, not 24 in length, or any of the servos is not a boolean
         print("Servos-Connected is not a correct list, not 24 in length, or one of the elements is not a Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[6],list)) or (limb_count != 7) or (limb_all_bool == False): # Check if Limbs Connected is proper list, not 7 in length, or any of the limbs is not a boolean
         print("Limbs-Connected . Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[7],bool)): # Check if External Sensors Connected is boolean
         print("Body-Sensors-Connected is not a Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[8],float)): # Check if Move Body is boolean
         print("Forelimb-Stance is not a valid Float. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[9],float)): # Check if Move Single Limb is boolean
         print("Forelimb-Swing is not a valid Float. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[10],float)) or (config_array[10] < 0): # Check if Single Limb to Move is integer and not less than 0
         print("Hindlimb-Stance is not a valid Float. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[11],float)): # Check if Move Multiple Limbs is boolean
         print("Hindlimb-Swing is not a valid Float. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[12],float)): # Check if Ratio Time is proper float
         print("Ratio-Time is not a valid Float. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[13],bool)) : # Check if Move Single Servo is boolean
         print("Move-Single-Servo is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[14],int)) or (config_array[14] < 0): # Check if Single Servo to Move is integer and not less than 0
         print("Single-Servo-To-Move is not a valid Integer. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[15],bool)): # Check if Move Multiple Servos is proper booelans
         print("Move-Multiple-Servos is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[16],list)) or (servos_proper_ints == False): # Check if servos to move is proper list and all servos are integers
         print("Servos-To-Move is not a valid list or not all elements in it are Integers. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[17],int)) or (valid_home_speed == False): # Check if Home Speed is integer and between 0 and 1023
         print("Home-Speed is not a valid Integer between 0-1023. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[18],str)): # Check if Output File Name is valid string
         print("Output-File-Name is not a valid String value. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[19],str)) or (not os.path.isdir(config_array[19])): # Check if Output File Directoy is valid string and proper directory
         print("Output-File-Directory is not a valid String or not a valid Directory. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[20],bool)): # Check if Position Record is proper boolean 
         print("Position is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[21],bool)): # Check if Speed Record is proper boolean
         print("Speed is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[22],bool)): # Check if Time Record is proper boolean
         print("Time is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[23],bool)): # Check Position Index Record is proper boolean
         print("Position-Index is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[24],bool)): # Check if Stride Count Record is proper boolean
         print("Stride-Count is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[25],bool)): # Check if Current Record is proper boolean
         print("Current is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[26],bool)): # Check if Voltage Record is proper boolean
         print("Voltage is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[27],bool)): # Check if Temperature Record is proper boolean
         print("Temperature is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[28],bool)): # Check if Neck Straight is proper boolean
         print("Neck-Straight is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[29],bool)): # Check if Spine Straight is proper boolean
         print("Spine-Straight is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[30],bool)): # Check if Tail Straight is proper boolean
         print("Tail-Straight is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[31],bool)): # Check if Silence Extraneous Output is proper boolean
         print("Silence-Extraneous-Output is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[32],bool)): # Check if Run Digital Only is proper boolean
         print("Run-Digital-Only is not a valid Boolean. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
 
-    if not any(config_array[5]):
-        print("No Servos are marked as connected. Please fix and try again.")
-        invalidate_value = True
+    if GUI_or_TERMINAL == -1: # If being used through the GUI, do not check if servos have already been established, the GUI will do this for you after detecting
+        pass
+    elif GUI_or_TERMINAL == 1:
+        if not any(config_array[5]): # If using the terminal, moving servos should already be established in the file
+            print("No Servos are marked as connected. Please fix and try again.")
+            invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     
-    confirmed_action = [0, 0]
-    action_currently_selected = False
-    action_array = [config_array[13], config_array[14], config_array[15], config_array[16]]
-    if action_array[0] == True:
+    confirmed_action = [0, 0] # Create a list for actions to populate
+    action_currently_selected = False # Change when an action is selected
+    action_array = [config_array[13], config_array[14], config_array[15], config_array[16]] # Assemble an action array detailing if a single or multiple servos are to move, and which servos will perform that
+    if action_array[0] == True: # If one servo is to move
         confirmed_action = [1, action_array[1]]
-        if action_currently_selected == True:
+        if action_currently_selected == True: # If an action was already selected, there is more than one acion present, and this is a problem
             print("More than one action selected. Please fix and try again.")
-            invalidate_value = True
+            invalidate_value = True # If this is the case, change the indicator value to reflect there is a problem
         action_currently_selected = True
-    if action_array[2] == True:
+    if action_array[2] == True: # If multiple servos are to move
         confirmed_action = [2, action_array[3]]
-        if action_currently_selected == True:
+        if action_currently_selected == True: # If an action was already selected, there is more than one acion present, and this is a problem
             print("More than one action selected. Please fix and try again.")
-            invalidate_value = True
+            invalidate_value = True # If this is the case, change the indicator value to reflect there is a problem
         action_currently_selected = True
 
-    if (action_currently_selected == False):
+    if (action_currently_selected == False): # If there's no action selected
         print("No action selected. Please fix and try again.")
-        invalidate_value = True
+        invalidate_value = True # If this is the case, change the indicator value to reflect there is a problem
     
     return invalidate_value, confirmed_action
 
@@ -241,9 +244,10 @@ def RecordPreferences(config_array): # Check if any of the record fields are set
     else:
         record_yesno = False
     record_fields.insert(0,record_yesno)
-    new_path = os.path.join(config_array[19],config_array[18])
-    outfile_whole = os.path.normpath(new_path)
-    record_fields.append(outfile_whole)
+    if record_yesno == True:
+        new_path = os.path.join(config_array[19],config_array[18])
+        outfile_whole = os.path.normpath(new_path)
+        record_fields.append(outfile_whole)
     return record_fields
 
 def DigitalSetup(config_array):
@@ -487,6 +491,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
     h_swing = config_array[11]
     f_stance = config_array[8]
     f_swing = config_array[9]
+    print("determine speeds - " + str(config_array[12]))
     h_st_per = h_stance / config_array[12]
     h_sw_per = h_swing / config_array[12]
     f_st_per = f_stance / config_array[12]
@@ -641,8 +646,8 @@ def Create_DigitalLimbs(limb_list,ServoDictionary):
                 else:
                     entire_limb_not_present = True
             if entire_limb_not_present == True:
-                print("Corresponding Servos for the indicated connected limbs are not present. Please fix and try again.")
-                exit()
+                # print("Corresponding Servos for the indicated connected limbs are not present. Please fix and try again.")
+                pass
             elif entire_limb_not_present == False:
                 Limb_ID += 1
                 if (Limb_ID >= 1) and (Limb_ID <= 4):
@@ -678,22 +683,23 @@ def Create_DigitalBody(LimbDictionary):
         print("Not all limbs are registered as being connected. Body can not be digitally assembled. Please fix and try again.")
     return WholeBody
 
-def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler,DigitalOnly):
+def StraightenSpine(ServosDictionary,port_hand_list,packetHandler,DigitalOnly):
     if DigitalOnly == True:
         pass
     elif DigitalOnly == False:
-        if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
-            port_hand_list[0].openPort()
-            port_hand_list[1].openPort()
-            port_hand_list[2].openPort()
-            ports_used = [0, 0, 0]
-            port_0_count = 0
-            port_0_list = []
-            port_1_count = 0
-            port_1_list = []
-            port_2_count = 0
-            port_2_list = []
-            for each_servo in BODY_LENGTH:
+        port_hand_list[0].openPort()
+        port_hand_list[1].openPort()
+        port_hand_list[2].openPort()
+        ports_used = [0, 0, 0]
+        port_0_count = 0
+        port_0_list = []
+        port_1_count = 0
+        port_1_list = []
+        port_2_count = 0
+        port_2_list = []
+        body_length_connected = []
+        for each_servo in BODY_LENGTH:
+            if each_servo in ServosDictionary:
                 if (ServosDictionary[each_servo].port_used == 0):
                     port_0_count += 1
                     port_0_list.append(each_servo)
@@ -706,107 +712,107 @@ def StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler
                     port_2_count += 1
                     port_2_list.append(each_servo)
                     ports_used[2] = 1
-            if port_0_count > 0:
-                # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
-                # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
-            if port_1_count > 0:
-                # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
-                # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
-            if port_2_count > 0:
-                # Initialize GroupSyncWrite instance
-                groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
-                # Initialize GroupSyncWrite instance
-                groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
-            GoalVelocity = []
-            GoalPosition = []
-            # Add parameters for Velocity and Position change commands
-            for index, each_servo in enumerate(BODY_LENGTH):
-                GoalVelocity.append(FormatSendData(int(ServosDictionary[each_servo].Speeds)))
-                GoalPosition.append(FormatSendData(ServosDictionary[each_servo].Positions))
-                if each_servo in port_0_list:
-                    dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return each_servo
-                    dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return each_servo
-                elif each_servo in port_1_list:
-                    dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return each_servo
-                    dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return each_servo
-                elif each_servo in port_2_list:
-                    dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
-                        return each_servo
-                    dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
-                    if dxl_addparam_result != True:
-                        print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
-                        return each_servo
-                else:
-                    print('Error in servo list. Please fix and try again.')
-            if ports_used[0] == 1:
-                # Syncwrite goal velocity
-                dxl_comm_result = groupSyncWriteVEL_1.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Velocity:Port 1")
-                # Clear syncwrite parameter storage
-                groupSyncWriteVEL_1.clearParam()
-            if ports_used[1] == 1:
-                # Syncwrite goal velocity
-                dxl_comm_result = groupSyncWriteVEL_2.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Velocity:Port 2")
-                # Clear syncwrite parameter storage
-                groupSyncWriteVEL_2.clearParam()
-            if ports_used[2] == 1:
-                # Syncwrite goal velocity
-                dxl_comm_result = groupSyncWriteVEL_3.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Velocity:Port 3")
-                # Clear syncwrite parameter storage
-                groupSyncWriteVEL_3.clearParam()
-            if ports_used[0] == 1:
-                # Syncwrite goal position
-                dxl_comm_result = groupSyncWritePOS_1.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Position:Port 1")
-                # Clear syncwrite parameter storage
-                groupSyncWritePOS_1.clearParam()
-            if ports_used[1] == 1:
-                # Syncwrite goal position
-                dxl_comm_result = groupSyncWritePOS_2.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Position:Port 2")
-                # Clear syncwrite parameter storage
-                groupSyncWritePOS_2.clearParam()
-            if ports_used[2] == 1:
-                # Syncwrite goal position
-                dxl_comm_result = groupSyncWritePOS_3.txPacket()
-                if dxl_comm_result != COMM_SUCCESS:
-                    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                    print("Position:Port 3")
-                # Clear syncwrite parameter storage
-                groupSyncWritePOS_3.clearParam()
-        else: 
-            print("Neck, Spine, or Tail have not been constructed. Please check and try again.")
-            quit()
+                body_length_connected.append(each_servo)
+        if port_0_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
+        if port_1_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
+        if port_2_count > 0:
+            # Initialize GroupSyncWrite instance
+            groupSyncWritePOS_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[37], 4)
+            # Initialize GroupSyncWrite instance
+            groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
+        GoalVelocity = []
+        GoalPosition = []
+        # Add parameters for Velocity and Position change commands
+        for index, each_servo in enumerate(body_length_connected):
+            GoalVelocity.append(FormatSendData(int(ServosDictionary[each_servo].Speeds)))
+            GoalPosition.append(FormatSendData(ServosDictionary[each_servo].Positions))
+            if each_servo in port_0_list:
+                dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return each_servo
+                dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return each_servo
+            elif each_servo in port_1_list:
+                dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return each_servo
+                dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return each_servo
+            elif each_servo in port_2_list:
+                dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
+                    return each_servo
+                dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
+                if dxl_addparam_result != True:
+                    print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
+                    return each_servo
+            elif (each_servo in ServosDictionary) and (each_servo not in port_0_list) and (each_servo not in port_1_list) and (each_servo not in port_2_list):
+                print("Servo #%03d not included in stay straight protocol" % each_servo)
+            else:
+                print('Error in servo list. Please fix and try again.')
+        if ports_used[0] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Velocity:Port 1")
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Velocity:Port 2")
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal velocity
+            dxl_comm_result = groupSyncWriteVEL_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Velocity:Port 3")
+            # Clear syncwrite parameter storage
+            groupSyncWriteVEL_3.clearParam()
+        if ports_used[0] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_1.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Position:Port 1")
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_1.clearParam()
+        if ports_used[1] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_2.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Position:Port 2")
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_2.clearParam()
+        if ports_used[2] == 1:
+            # Syncwrite goal position
+            dxl_comm_result = groupSyncWritePOS_3.txPacket()
+            if dxl_comm_result != COMM_SUCCESS:
+                print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                print("Position:Port 3")
+            # Clear syncwrite parameter storage
+            groupSyncWritePOS_3.clearParam()
     return 0
 
 def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time,DigitalOnly):
@@ -861,6 +867,12 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
         readers_exist = False
         for stride_count in range(stride_numbers[0]):
             for position_index in range(stride_numbers[1]):
+                if (stride_count == 0) and (position_index == 0): # Skip the first position, this is Home Position
+                    continue
+                if (stride_count != 0) and (position_index == 0):
+                    speed_index = stride_numbers[1] - 1
+                else:
+                    speed_index = position_index - 1
                 if ports_used[0] == 1:
                     isStopped_0 = [0] * port_0_count
                 else:
@@ -873,12 +885,6 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                     isStopped_2 = [0] * port_2_count
                 else:
                     isStopped_2 = []
-                if (stride_count == 0) and (position_index == 0): # Skip the first position, this is Home Position
-                    continue
-                if (stride_count != 0) and (position_index == 0):
-                    speed_index = stride_numbers[1] - 1
-                else:
-                    speed_index = position_index - 1
                 # Add parameters for Velocity and Position change commands
                 for index, each_servo in enumerate(servo_list):
                     GoalVelocity.append(FormatSendData(int(ServosDictionary[each_servo].Speeds[speed_index])))
@@ -916,7 +922,8 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
-                        print("%s - Veloctiy:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+                        print("%s - Velocity:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+                        
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_1.clearParam()
                 if ports_used[1] == 1:
@@ -1362,7 +1369,6 @@ def Move_Spider_Up(servo_list, ServosDictionary, port_hand_list, port_servo_dict
                 ports_used[2] = 1
             else:
                 pass
-            
         port_0_count = 0
         port_0_list = []
         port_1_count = 0
@@ -1512,14 +1518,22 @@ def Move_Spider_Up(servo_list, ServosDictionary, port_hand_list, port_servo_dict
                         isStopped_2[index_3] = 1
                     index_3 += 1
             if (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2):
-                pass
-            else:
                 if ports_used[0] == 1:
                     groupSyncRead_Moving_1.clearParam()
                 if ports_used[1] == 1:
                     groupSyncRead_Moving_2.clearParam()
                 if ports_used[2] == 1:
                     groupSyncRead_Moving_3.clearParam()
+                for each_servo in ServosDictionary.keys():
+                    if each_servo in port_0_list:
+                        groupSyncRead_Moving_1.addParam(each_servo)
+                    elif each_servo in port_1_list:
+                        groupSyncRead_Moving_2.addParam(each_servo)
+                    elif each_servo in port_2_list:
+                        groupSyncRead_Moving_3.addParam(each_servo)
+            else:
+                break
+                
                 
             
 def Move_Spider_Down(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, in_home_speed, DigitalOnly):
@@ -1696,14 +1710,21 @@ def Move_Spider_Down(servo_list, ServosDictionary, port_hand_list, port_servo_di
                         isStopped_2[index_3] = 1
                     index_3 += 1
             if (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2):
-                pass
-            else:
                 if ports_used[0] == 1:
                     groupSyncRead_Moving_1.clearParam()
                 if ports_used[1] == 1:
                     groupSyncRead_Moving_2.clearParam()
                 if ports_used[2] == 1:
                     groupSyncRead_Moving_3.clearParam()
+                for each_servo in ServosDictionary.keys():
+                    if each_servo in port_0_list:
+                        groupSyncRead_Moving_1.addParam(each_servo)
+                    elif each_servo in port_1_list:
+                        groupSyncRead_Moving_2.addParam(each_servo)
+                    elif each_servo in port_2_list:
+                        groupSyncRead_Moving_3.addParam(each_servo)
+            else:
+                break
                 
 
 def Write_Settings_Doc(Config_Dictionary,filename_for_save):
