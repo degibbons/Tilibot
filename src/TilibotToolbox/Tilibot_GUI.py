@@ -4,12 +4,10 @@ from configparser import ConfigParser
 from doctest import master
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog as fd
+from tkinter import filedialog as fdlg
 from tkinter import messagebox
 import tkinter.font as tkFont
-# import numpy as np
 import time
-# import pandas as pd
 from Tilibot_Constants import *
 from Tilibot_Functions import *
 from Tilibot_Classes import *
@@ -18,6 +16,7 @@ from dynamixel_sdk import *
 import sys
 
 GUI_or_TERMINAL = -1 # -1 for GUI, +1 for Terminal
+Step_Progressor = 0
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -25,10 +24,10 @@ class MainWindow(tk.Tk):
         self.packetHandler = None # The PacketHandler used to move information to, from, and between servos
         self.move_list = [] # Lists to Assemble from detection - These are the Servos that SHOULD move - Limbs
         self.dont_move_list = [] #These are the servos that should NOT move - Spine
-        self.port_servo_dict = None # Dictionary containing data in the form of {# of servo:Porthandler object}
         self.port_hand_list = None # List of port-handlers 
+        self.port_servo_dict = None # Dictionary containing data in the form of {# of servo:Porthandler object}
         self.port_used_dict = None # Dictionary containing data in the form of {# of servo:Port #}
-        self.confirmed_action = None # The desired action of moving one or several servos
+        self.confirmed_action = [0,[]] # The desired action of moving one or several servos
         self.record_array = None # The desired fields for recording
         self.stride_numbers = None # The amount of strides and the positions for each
         self.PositionsMatrix = None # The positions each servo 1-16 should be moving to in 1 stride
@@ -44,6 +43,7 @@ class MainWindow(tk.Tk):
 
         self.servo_colors = {"gray":"#979A9A", # Colors used for servos in schematic AND indicator light
                         "yellow":"#F4D03F",
+                        "orange":"#FFA500",
                         "red":"#E74C3C",
                         "green":"#27AE60",
                         "blue":"#3498DB",
@@ -101,10 +101,13 @@ class MainWindow(tk.Tk):
         # Save Settings Box
         self.ss_object_box = None # Save Settings Box Object
         self.ss_settings_file_name = tk.StringVar() # Establish the target file name for an imported settings file as a tkinter string variable
+
+        # Reboot / Reset Box
+        self.rr_object_box = None # Reboot / Reset Box Object
         
         #  Initialize the GUI Window
         self.title("Tilibot Visual Controller") # Title of the tkinter window
-        self.geometry("1200x765+20+20") # Set size and origin position of tkinter window
+        self.geometry("1250x765+20+20") # Set size and origin position of tkinter window
 
         # create canvas
         self.myCanvas = tk.Canvas(master=self, bg="white", height = 750, width=650) # Create the canvas to draw on
@@ -239,16 +242,18 @@ class MainWindow(tk.Tk):
 
         # Create Indicator Light Legend and corresponding Objects
         indicator_BoundingBox = self.myCanvas.create_rectangle(365,580,645,740)
-        color_indicator_Gray = self.myCanvas.create_oval(400, 590, 420, 610, fill=self.servo_colors["gray"])
-        color_indicator_Red = self.myCanvas.create_oval(400, 620, 420, 640, fill=self.servo_colors["red"])
-        color_indicator_Yellow = self.myCanvas.create_oval(400, 650, 420, 670, fill=self.servo_colors["yellow"])
-        color_indicator_Green = self.myCanvas.create_oval(400, 680, 420, 700, fill=self.servo_colors["green"])
+        color_indicator_Gray = self.myCanvas.create_oval(400, 585, 420, 605, fill=self.servo_colors["gray"])
+        color_indicator_Red = self.myCanvas.create_oval(400, 610, 420, 630, fill=self.servo_colors["red"])
+        color_indicator_Orange = self.myCanvas.create_oval(400, 635, 420, 655, fill=self.servo_colors["orange"])
+        color_indicator_Yellow = self.myCanvas.create_oval(400, 660, 420, 680, fill=self.servo_colors["yellow"])
+        color_indicator_Green = self.myCanvas.create_oval(400, 685, 420, 705, fill=self.servo_colors["green"])
         color_indicator_Purple = self.myCanvas.create_oval(400, 710, 420, 730, fill=self.servo_colors["purple"])
         # Create Legend Labels
-        color_indicator_Gray_text = self.myCanvas.create_text(483, 600,text="Robot Not Ready")
-        color_indicator_Red_text = self.myCanvas.create_text(534, 630,text="Robot Ready - Not In Home Position")
-        color_indicator_Yellow_text = self.myCanvas.create_text(523, 660, text="Robot Ready - In Home Position")
-        color_indicator_Green_text = self.myCanvas.create_text(478, 690, text="Robot Running")
+        color_indicator_Gray_text = self.myCanvas.create_text(483, 595,text="Robot Not Ready")
+        color_indicator_Red_text = self.myCanvas.create_text(497, 620,text="No Kinematics Loaded")
+        color_indicator_Orange_text = self.myCanvas.create_text(534,645,text="Robot Ready - Not in Home Position")
+        color_indicator_Yellow_text = self.myCanvas.create_text(523, 670, text="Robot Ready - In Home Position")
+        color_indicator_Green_text = self.myCanvas.create_text(478, 695, text="Robot Running")
         color_indicator_Purple_text = self.myCanvas.create_text(500, 720, text="Robot Finished Running")
 
         # Create instructions legend and corresponding labels
@@ -258,9 +263,9 @@ class MainWindow(tk.Tk):
         step_2_label = self.myCanvas.create_text(66,334,text='Step 2: Detect Servos')
         step_3_label = self.myCanvas.create_text(132,348,text='Step 3: Mark Moving and Non-Moving Servos')
         step_4_label = self.myCanvas.create_text(118,362,text='Step 4: Set Options for Amount of Servos')
-        step_5_label = self.myCanvas.create_text(93,376,text='Step 5: Load the Kinematics File')
-        step_6_label = self.myCanvas.create_text(97,390,text='Step 6: Set Options for Recording')
-        step_7_label = self.myCanvas.create_text(103,404,text='Step 7: Set Stride Time and Amount')
+        step_5_label = self.myCanvas.create_text(97,376,text='Step 5: Set Options for Recording')
+        step_6_label = self.myCanvas.create_text(103,390,text='Step 6: Set Stride Time and Amount')
+        step_7_label = self.myCanvas.create_text(93,404,text='Step 7: Load the Kinematics File')
         step_8_label = self.myCanvas.create_text(72,418,text='Step 8: Select Get Ready')
         step_9_label = self.myCanvas.create_text(56,432,text='Step 9: Select Run')
         step_10_label = self.myCanvas.create_text(134,446,text='Step 10: Select Reset to Run Again or Shutdown')
@@ -301,6 +306,7 @@ class MainWindow(tk.Tk):
         global_settings_button.grid(column=3,row=1,pady=10,sticky=tk.E) # Place global settings button in frame
 
         frame_2 = tk.Frame(master=self) # Create Frame for servo detection tools
+        detect_servos_button = ttk.Button(master=frame_2, text="Detect Connected Servos",command=self.detect_servos) # Create button for pinging servos to detect them and to populate the list
         list_of_detected_servos = () # Establish a list variable for the servo list to draw from and populate
         servo_list_var = tk.StringVar(value=list_of_detected_servos) # Establish a tkinter string variable to represent what goes in the servo list box
         self.servo_listbox = tk.Listbox( # Create the listbox to display each detected servo
@@ -308,15 +314,16 @@ class MainWindow(tk.Tk):
             listvariable=servo_list_var,
             height=24,
             selectmode='extended')
-
-        detect_servos_button = ttk.Button(master=frame_2, text="Detect Connected Servos",command=self.detect_servos) # Create button for pinging servos to detect them and to populate the list
         mark_to_move_button = ttk.Button(master=frame_2, text='Mark Selected to Move',command=self.mark_servo_move) # Create button to mark the selected servos to move
         mark_to_stay_button = ttk.Button(master=frame_2, text='Mark Selected to Stay Straight',command=self.mark_servo_stay) # Create button to mark the selected servos to NOT move
+        reboot_reset_button = ttk.Button(master=frame_2,text="Reboot / Reset",command=self.open_reboot_reset_box)
         frame_2.grid(column=1, row=0, rowspan=6, padx=5, pady=5) # Place frame on tkinter window
         detect_servos_button.grid(row=0,padx=5,pady=5) # Place detect servos button in frame
         self.servo_listbox.grid(row=1,rowspan=3,padx=10,pady=10) # Place listbox in frame
         mark_to_move_button.grid(row=4,padx=5,pady=5) # Place mark to move button in frame
         mark_to_stay_button.grid(row=5,padx=5,pady=5) # Place mark to stay button in frame
+        reboot_reset_button.grid(column=0,row=6,padx=5,pady=5)
+        
 
 
         frame_3 = tk.Frame(master=self) # Create frame to hold configuring options, buttons, and toggle indicators
@@ -325,7 +332,6 @@ class MainWindow(tk.Tk):
         move_rb_many = ttk.Radiobutton(master=frame_3,text="Move Multiple Servos",variable=self.move_select,value=1) # Create Radio Button for moving multiple servo
         self.move_select.set(1) # Set the Multiple Servo Move button to be selected by default
         move_configure_button = ttk.Button(master=frame_3,text="Configure Options",command=self.open_move_box) # Create the Configure Movement button to put in movement ratio numbers
-        load_kinematics_file_button = ttk.Button(master=frame_3,text="Load Kinematics File",command=self.load_kinem_file) # Create the Load Kinematics file button for importing Kinematics Data for movement
         self.record_yesno = tk.IntVar() # Create a tkinter variable to record if the user wants to record data or not
         record_data_checkbox = ttk.Checkbutton(master=frame_3, text="Record Data?",onvalue = 1,offvalue = 0,variable=self.record_yesno) # Create the data record checkbox for indicating if the user wants to record data or not
         self.record_yesno.set(value=0) # Set the default value of the record checkbox to NOT be selected
@@ -334,9 +340,8 @@ class MainWindow(tk.Tk):
         move_rb_one.grid(row=0,column=0,sticky=tk.W) # Plcae the first radio button in frame
         move_rb_many.grid(row=1,column=0,stick=tk.W) # Place the second radio button in frame
         move_configure_button.grid(row=0,column=1,rowspan=2,sticky=tk.E,padx=5,pady=10) # Place the Move Configure button in frame
-        load_kinematics_file_button.grid(row=2,column=0,columnspan=2,pady=10) # Place the load kinematics file button in frame
-        record_data_checkbox.grid(row=3,column=0,sticky=tk.W) # Place the data checkbox in frame
-        record_data_configure_button.grid(row=3,column=1,sticky=tk.E,padx=5,pady=10) # Place Data Configure button in frame
+        record_data_checkbox.grid(row=2,column=0,sticky=tk.W) # Place the data checkbox in frame
+        record_data_configure_button.grid(row=2,column=1,sticky=tk.E,padx=5,pady=10) # Place Data Configure button in frame
 
 
         frame_4 = tk.Frame(master=self) # Create Frame for Stride Variable Inputs, Run Time Labels, and the Indicator Light
@@ -365,10 +370,12 @@ class MainWindow(tk.Tk):
         self.act_end_time.set("0.000") # Set the starting time to 0 second float
         self.stride_time_entry_string.trace('w',self.calculate_run_time) # Create a callback when the stride time entry string variable is changed
         self.stride_amount_entry_string.trace('w',self.calculate_run_time) # Create a callback when the stride amount entry string variable is changed
+        load_kinematics_file_button = ttk.Button(master=frame_4,text="Load Kinematics File",command=self.load_kinem_file) # Create the Load Kinematics file button for importing Kinematics Data for movement
+        load_kinematics_file_button.grid(row=4,column=0,columnspan=2,pady=10) # Place the load kinematics file button in frame
         indicator_label = ttk.Label(master=frame_4,text="Ready Indicator: ") # Create label for displaying the indicator light
-        indicator_label.grid(column=0,row=4) # Put the label in the frame
+        indicator_label.grid(column=0,row=5) # Put the label in the frame
         self.indicator_canvas = tk.Canvas(master=frame_4,width=50,height=50) # Create small canvas to place indicator light
-        self.indicator_canvas.grid(column=1,row=4,sticky=tk.W+tk.E,pady=10) # Place the canvas in the tkinter window
+        self.indicator_canvas.grid(column=1,row=5,sticky=tk.W+tk.E,pady=10) # Place the canvas in the tkinter window
         self.indic_oval = self.indicator_canvas.create_oval(20, 20, 40, 40)  # Create a circle on the Canvas
         self.indicator_canvas.itemconfig(self.indic_oval, fill="gray") # Fill the circle with the color gray
 
@@ -379,14 +386,18 @@ class MainWindow(tk.Tk):
         run_button = ttk.Button(master=frame_5,text="Run",command = self.tilibot_run) # Create the Run button to run the robot through a trial
         reset_button = ttk.Button(master=frame_5,text="Reset",command = self.tilibot_reset) # Create the Reset button for reseting the robot between trials
         shutdown_button = ttk.Button(master=frame_5,text="Shutdown",command = self.tilibot_shutdown) # Create a button to Shut down the robot 
+        data_analysis_button = ttk.Button(master=frame_5,text="Analyse Data")
+        visualize_data_button = ttk.Button(master=frame_5,text="Visualize Data")
         frame_5.grid(column=2,row=3,columnspan=3,sticky=tk.N) # Place frame on tkinter window
         save_settings_button.grid(row=0,column=0,sticky=tk.W,padx=5,pady=5) # Place save settings button in frame
         load_settings_button.grid(row=1,column=0,sticky=tk.W+tk.E,padx=5,pady=5) # Place load settings button in frame
         get_ready_button.grid(row=0,column=1,sticky=tk.W+tk.E,padx=5,pady=5) # Place get ready button in frame
         run_button.grid(row=0,column=2,sticky=tk.W+tk.E,padx=5,pady=5) # Place run button in frame
-        reset_button.grid(row=1,column=1,sticky=tk.E+tk.W,padx=5,pady=5) # Place reset button in frame
-        shutdown_button.grid(row=1,column=2,sticky=tk.E,padx=5,pady=5) # Place shutdown button in frame
-
+        data_analysis_button.grid(column=1,row=1,sticky=tk.W+tk.E,padx=5,pady=5)
+        visualize_data_button.grid(column=2,row=1,sticky=tk.W+tk.E,padx=5,pady=5)
+        reset_button.grid(row=2,column=1,sticky=tk.E+tk.W,padx=5,pady=5) # Place reset button in frame
+        shutdown_button.grid(row=2,column=2,sticky=tk.E,padx=5,pady=5) # Place shutdown button in frame
+        
         frame_6 = tk.Frame(master=self) # Create a frame to display the kinematics and settings file names
         kinematics_file_label = ttk.Label(master=frame_6,text="Kinematics File: ") # Create label for the kinematics file name label
         settings_file_label = ttk.Label(master=frame_6,text="Settings File: ") # Create label for settings file name label
@@ -397,7 +408,7 @@ class MainWindow(tk.Tk):
         settings_file_label.grid(row=1,column=0,sticky=tk.E,pady=5) # Place label in frame
         kinematics_file_selected.grid(row=0,column=1,sticky=tk.W,pady=5) # Place label in frame
         settings_file_selected.grid(row=1,column=1,sticky=tk.W,pady=5) # Place label in frame
-
+        
 
     def stop_operation(self): # Function for stopping the operation of the robot when running
         global STOP_VALUE # Make the STOP_VALUE variable global so it may be accessed and changed
@@ -411,9 +422,14 @@ class MainWindow(tk.Tk):
         global STOP_VALUE # Make the STOP_VALUE variable global so it may be accessed and changed
         STOP_VALUE = True # Set the STOP_VALUE variable to True after the Stop! button has been pressed
 
-    def calculate_run_time(self): # Function to calculate the run time that would occur in a perfect closed environment with no errors
-        calc_num = float(self.stride_time_entry_string.get()) * float(int(self.stride_amount_entry_string.get())) # Calculate the perfect run time using the two input numbers
-        self.calc_end_time.set('{:.3f}'.format(calc_num)) # Set the calculated label to display the result
+    def calculate_run_time(self,*args): # Function to calculate the run time that would occur in a perfect closed environment with no errors
+        try:
+            calc_num = float(self.stride_time_entry_string.get()) * float(int(self.stride_amount_entry_string.get())) # Calculate the perfect run time using the two input numbers
+            self.calc_end_time.set('{:.3f}'.format(calc_num)) # Set the calculated label to display the result
+            self.Config_Options["stride_time"] = float(self.stride_time_entry_string.get())
+            self.Config_Options["stride_amount"] = int(self.stride_amount_entry_string.get())
+        except:
+            pass    
 
     def open_help_box(self): # Function to open the help box and populate it with the proper widgets
         self.hb_object_box = tk.Toplevel(self) # Create a new window for the help box object
@@ -432,7 +448,6 @@ class MainWindow(tk.Tk):
         self.page_10_button = tk.Button(master=frame_12,text="9-Run",command=lambda b=10:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-9
         self.page_11_button = tk.Button(master=frame_12,text="10-Clean Up",command=lambda b=11:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-10
         self.page_12_button = tk.Button(master=frame_12,text="Other",command=lambda b=12:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying other relevant information
-        frame_13 = tk.Frame(master=self.hb_object_box) # Create a frame to hold the text for each page
         self.page_1_display = ttk.Label(master=self.hb_object_box,text="The Tilibot Visual Controller is used to guide the operation of the Tilibot Robot. Follow the steps presented for proper execution without issue. The order of exection is as follows:\n\n 1. Global Settings\n 2. Detect Servos\n 3. Mark Servos\n 4. Servo Options\n 5. Kinematics File\n 6. Recording Options\n 7. Stride Numbers\n 8. Get Ready\n 9. Run\n 10. Clean Up\n\n For further questions or inquiries, please contact danegibbons@gmail.com or text (631) 456-7733.")
         self.page_2_display = ttk.Label(master=self.hb_object_box,text="The first step is to set your Global Settings.\n\n 1. Select the Global Settings box under the main title next to the Help Button.\n 2. Enter the Baud Rate (the speed at which the servos communicate)\n 3. and the Home Speed (the sped at which the robot will move to each home position).\n 4. Select Digital or Physical only, to indicate if the execution will happen only digitally or in physical space.\n 5. Then check off if the Body Sensors are connected or not.")
         self.page_3_display = ttk.Label(master=self.hb_object_box,text="The second step is to detect your servos.\n\n 1. Simply hit the Detect Servos button and the list should populate itself.\n\n The colors of the servos on the schematic should turn yellow, indicating that the servo was detected, but no option was selected yet.")
@@ -481,7 +496,6 @@ class MainWindow(tk.Tk):
             self.hb_dictionary_displays[button_clicked].config(wraplength=575) # Set the wraplength so the text fits within the box
             self.active_help_page = button_clicked # Change the active_help_page variable to accurately represent the last button clicked
 
-
     def close_help_box(self): # Function to close the help box when the corresponding button is clicked
         self.hb_object_box.destroy() # Destroy the help box so it no longer exists
 
@@ -528,6 +542,7 @@ class MainWindow(tk.Tk):
             self.sensors_connect.set(1) # Set the widget to be checked
 
     def apply_global_settings(self): # Function to apply global settings to config dictionary variable when button pressed
+        global Step_Progressor
         self.Config_Options["baud_rate"] = int(self.baud_rate_entry_string.get()) # Set baud rate in Config_Options dictionary from entry input
         self.Config_Options["home_speed"] = int(self.home_speed_entry_string.get()) # Set home speed in Config_Options dictionary from entry input
         run_dig_result = self.run_condition.get() # Get the run condition from the radio buttons
@@ -536,68 +551,73 @@ class MainWindow(tk.Tk):
         else: # If run physically is selected
             self.Config_Options["run_digital_only"] = False # Set the value to false
         self.Config_Options["connected_sensors"] = bool(self.sensors_connect.get()) # Set the connected sensors variable equal to either true or false, dependent on the checkbox
+        Step_Progressor = 1
         
-
-    def close_global_settings_box(self):
+    def close_global_settings_box(self): # Function to destroy 
         # Code to save and close
         self.gs_object_box.destroy() # Destroy the global settings window
     
     def open_move_box(self): # Function to open the move settings box and populate it with the proper widgets
-        self.ms_object_box = tk.Toplevel(self) # Create a new window for Move Settings box object
-        self.pos_per_stride = tk.StringVar() # Create a variable to hold the amount of positions per stride
-        self.FL_st_ratio = tk.StringVar() # Create a variable to hold the forelimb stance ratio time
-        self.FL_sw_ratio = tk.StringVar() # Create a variable to hold the forelimb swing ratio time
-        self.HL_st_ratio = tk.StringVar() # Create a variable to hold the hindlimb stance ratio time
-        self.HL_sw_ratio = tk.StringVar() # Create a variable to hold the hindlimb swing ratio time
-        self.ms_object_box.geometry("450x250") # Set the geometry of the move settings box
-        self.ms_object_box.title("Move Servo Options") # Set the title of the move settings box
-        positions_per_stride_label = ttk.Label(master=self.ms_object_box,text="# of Positions per Stride Here") # Create label to indicate positions per stride input
-        positions_per_stride_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.pos_per_stride) # Create input for the amount of positions per stride
-        Forelimb_Stance_label = ttk.Label(master=self.ms_object_box,text="Forelimb Stance Ratio:") # Create a label to indicate input for the forelimb stance ratio
-        Forelimb_Stance_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.FL_st_ratio) # Create an input for the Forelimb Stance Ratio time
-        Forelimb_Swing_label = ttk.Label(master=self.ms_object_box,text="Forelimb Swing Ratio:") # Create a label to indicate input for the forelimb swing ratio
-        Forelimb_Swing_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.FL_sw_ratio) # Create an input for the Forelimb Swing Ratio time
-        Hindlimb_Stance_label = ttk.Label(master=self.ms_object_box,text="Hindlimb Stance Ratio:") # Create a label to indicate input for the hindlimb stance ratio
-        Hindlimb_Stance_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.HL_st_ratio) # Create an input for the Hindlimb Stance Ratio time
-        Hindlimb_Swing_label = ttk.Label(master=self.ms_object_box,text="Hindlimb Swing Ratio:") # Create a label to indicate input for the hindlimb swing ratio
-        Hindlimb_Swing_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.HL_sw_ratio) # Create an input for the Hindlimb Swing Ratio time
-        self.Forelimb_Ratio_Time_label = ttk.Label(master=self.ms_object_box,text="= ",background='#979A9A') # Create label to display the sum of forelimb ratio times
-        self.Hindlimb_Ratio_Time_label = ttk.Label(master=self.ms_object_box,text="= ",background='#979A9A') # Create a label to display the sum of hindlimb ratio times
-        plus_a = ttk.Label(master=self.ms_object_box,text="+",background='#979A9A') # Create a label to display adding
-        plus_b = ttk.Label(master=self.ms_object_box,text="+",background='#979A9A') # Create a label to display adding
-        self.FL_st_ratio.trace('w',self.add_fl_nums) # Create a callback when forelimb stance ratio is changed
-        self.FL_sw_ratio.trace('w',self.add_fl_nums) # Create a callback when forelimb swing ratio is changed
-        self.HL_st_ratio.trace('w',self.add_hl_nums) # Create a callback when hindlimb stance ratio is changed
-        self.HL_sw_ratio.trace('w',self.add_hl_nums) # Create a callback when hindlimb swing ratio is changed
-        apply_button = ttk.Button(master=self.ms_object_box,text="Apply") # Create button to apply settings changes
-        close_button = ttk.Button(master=self.ms_object_box,text="Close",command=self.close_move_box) # Create button to close/destroy the move settings box
-        positions_per_stride_label.grid(row=0,column=0,pady=5,padx=10,sticky=tk.S) # Put label in tkinter window
-        positions_per_stride_entry.grid(row=1,column=0,pady=5,sticky=tk.W,padx=10)# Put entry in tkinter window
-        Forelimb_Stance_label.grid(row=2,column=0,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
-        Forelimb_Stance_entry.grid(row=3,column=0,sticky=tk.W,padx=10,pady=5) # Put entry in tkinter window
-        plus_a.grid(row=3,column=1,pady=5) # Put + in tkinter window
-        Forelimb_Swing_label.grid(row=2,column=2,sticky=tk.E,padx=10,pady=5) # Put label in tkinter window
-        Forelimb_Swing_entry.grid(row=3,column=2,sticky=tk.E,padx=10,pady=5) # Put entry in tkinter window
-        self.Forelimb_Ratio_Time_label.grid(row=3,column=3,sticky=tk.W,padx=10,pady=5)
-        Hindlimb_Stance_label.grid(row=4,column=0,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
-        Hindlimb_Stance_entry.grid(row=5,column=0,sticky=tk.W,padx=10,pady=5) # Put entry in tkinter window
-        plus_b.grid(row=5,column=1,pady=5) # Put + in tkinter window
-        Hindlimb_Swing_label.grid(row=4,column=2,sticky=tk.E,padx=10,pady=5) # Put label in tkinter window
-        Hindlimb_Swing_entry.grid(row=5,column=2,sticky=tk.E,padx=10,pady=5) # Put entry in tkinter window
-        self.Hindlimb_Ratio_Time_label.grid(row=5,column=3,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
-        apply_button.grid(row=6,column=0,pady=15) # Put Apply Button in tkinter window
-        close_button.grid(row=6,column=3,pady=15) # Put Close Button in tkinter window
-        # Apply settings to widgets if pre-loaded
-        if self.Config_Options["position_amount"] != None: # If Position Amount is pre-determined
-            self.pos_per_stride.set(str(self.Config_Options["forelimb_swing_time"])) # Set the entry to display the pre-determined value
-        if self.Config_Options["forelimb_stance_time"] != None: # If Forelimb Stance is pre-determined
-            self.FL_st_ratio.set(str(self.Config_Options["forelimb_stance_time"])) # Set the entry to display the pre-determined value
-        if self.Config_Options["forelimb_swing_time"] != None: # If Forelimb Swing is pre-determined
-            self.FL_sw_ratio.set(str(self.Config_Options["forelimb_swing_time"])) # Set the entry to display the pre-determined value
-        if self.Config_Options["hindlimb_stance_time"] != None: # If Hindlimb Stance is pre-determined
-            self.HL_st_ratio.set(str(self.Config_Options["hindlimb_stance_time"])) # Set the entry to display the pre-determined value
-        if self.Config_Options["hindlimb_swing_time"] != None: # If Hindlimb Swing is pre-determined
-            self.HL_sw_ratio.set(str(self.Config_Options["hindlimb_swing_time"])) # Set the entry to display the pre-determined value
+        global Step_Progressor
+        if Step_Progressor < 3:
+            messagebox.showerror(title="Error",message="Error - Servos not marked yet. Cannot set move settings before servos are marked.")
+        else:
+            self.ms_object_box = tk.Toplevel(self) # Create a new window for Move Settings box object
+            self.pos_per_stride = tk.StringVar() # Create a variable to hold the amount of positions per stride
+            self.FL_st_ratio = tk.StringVar() # Create a variable to hold the forelimb stance ratio time
+            self.FL_sw_ratio = tk.StringVar() # Create a variable to hold the forelimb swing ratio time
+            self.HL_st_ratio = tk.StringVar() # Create a variable to hold the hindlimb stance ratio time
+            self.HL_sw_ratio = tk.StringVar() # Create a variable to hold the hindlimb swing ratio time
+            self.ms_object_box.geometry("450x250") # Set the geometry of the move settings box
+            self.ms_object_box.title("Move Servo Options") # Set the title of the move settings box
+            positions_per_stride_label = ttk.Label(master=self.ms_object_box,text="# of Positions per Stride Here") # Create label to indicate positions per stride input
+            positions_per_stride_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.pos_per_stride) # Create input for the amount of positions per stride
+            Forelimb_Stance_label = ttk.Label(master=self.ms_object_box,text="Forelimb Stance Ratio:") # Create a label to indicate input for the forelimb stance ratio
+            Forelimb_Stance_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.FL_st_ratio) # Create an input for the Forelimb Stance Ratio time
+            Forelimb_Swing_label = ttk.Label(master=self.ms_object_box,text="Forelimb Swing Ratio:") # Create a label to indicate input for the forelimb swing ratio
+            Forelimb_Swing_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.FL_sw_ratio) # Create an input for the Forelimb Swing Ratio time
+            Hindlimb_Stance_label = ttk.Label(master=self.ms_object_box,text="Hindlimb Stance Ratio:") # Create a label to indicate input for the hindlimb stance ratio
+            Hindlimb_Stance_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.HL_st_ratio) # Create an input for the Hindlimb Stance Ratio time
+            Hindlimb_Swing_label = ttk.Label(master=self.ms_object_box,text="Hindlimb Swing Ratio:") # Create a label to indicate input for the hindlimb swing ratio
+            Hindlimb_Swing_entry = ttk.Entry(master=self.ms_object_box,textvariable=self.HL_sw_ratio) # Create an input for the Hindlimb Swing Ratio time
+            self.Forelimb_Ratio_Time_label = ttk.Label(master=self.ms_object_box,text="= ",background='#979A9A') # Create label to display the sum of forelimb ratio times
+            self.Hindlimb_Ratio_Time_label = ttk.Label(master=self.ms_object_box,text="= ",background='#979A9A') # Create a label to display the sum of hindlimb ratio times
+            plus_a = ttk.Label(master=self.ms_object_box,text="+",background='#979A9A') # Create a label to display adding
+            plus_b = ttk.Label(master=self.ms_object_box,text="+",background='#979A9A') # Create a label to display adding
+            self.FL_st_ratio.trace('w',self.add_fl_nums) # Create a callback when forelimb stance ratio is changed
+            self.FL_sw_ratio.trace('w',self.add_fl_nums) # Create a callback when forelimb swing ratio is changed
+            self.HL_st_ratio.trace('w',self.add_hl_nums) # Create a callback when hindlimb stance ratio is changed
+            self.HL_sw_ratio.trace('w',self.add_hl_nums) # Create a callback when hindlimb swing ratio is changed
+            apply_button = ttk.Button(master=self.ms_object_box,text="Apply",command=self.apply_move_settings) # Create button to apply settings changes
+            close_button = ttk.Button(master=self.ms_object_box,text="Close",command=self.close_move_box) # Create button to close/destroy the move settings box
+            positions_per_stride_label.grid(row=0,column=0,pady=5,padx=10,sticky=tk.S) # Put label in tkinter window
+            positions_per_stride_entry.grid(row=1,column=0,pady=5,sticky=tk.W,padx=10)# Put entry in tkinter window
+            Forelimb_Stance_label.grid(row=2,column=0,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
+            Forelimb_Stance_entry.grid(row=3,column=0,sticky=tk.W,padx=10,pady=5) # Put entry in tkinter window
+            plus_a.grid(row=3,column=1,pady=5) # Put + in tkinter window
+            Forelimb_Swing_label.grid(row=2,column=2,sticky=tk.E,padx=10,pady=5) # Put label in tkinter window
+            Forelimb_Swing_entry.grid(row=3,column=2,sticky=tk.E,padx=10,pady=5) # Put entry in tkinter window
+            self.Forelimb_Ratio_Time_label.grid(row=3,column=3,sticky=tk.W,padx=10,pady=5)
+            Hindlimb_Stance_label.grid(row=4,column=0,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
+            Hindlimb_Stance_entry.grid(row=5,column=0,sticky=tk.W,padx=10,pady=5) # Put entry in tkinter window
+            plus_b.grid(row=5,column=1,pady=5) # Put + in tkinter window
+            Hindlimb_Swing_label.grid(row=4,column=2,sticky=tk.E,padx=10,pady=5) # Put label in tkinter window
+            Hindlimb_Swing_entry.grid(row=5,column=2,sticky=tk.E,padx=10,pady=5) # Put entry in tkinter window
+            self.Hindlimb_Ratio_Time_label.grid(row=5,column=3,sticky=tk.W,padx=10,pady=5) # Put label in tkinter window
+            apply_button.grid(row=6,column=0,pady=15) # Put Apply Button in tkinter window
+            close_button.grid(row=6,column=3,pady=15) # Put Close Button in tkinter window
+            # Apply settings to widgets if pre-loaded
+            if self.Config_Options["position_amount"] != None: # If Position Amount is pre-determined
+                self.pos_per_stride.set(str(self.Config_Options["position_amount"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["forelimb_stance_time"] != None: # If Forelimb Stance is pre-determined
+                self.FL_st_ratio.set(str(self.Config_Options["forelimb_stance_time"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["forelimb_swing_time"] != None: # If Forelimb Swing is pre-determined
+                self.FL_sw_ratio.set(str(self.Config_Options["forelimb_swing_time"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["hindlimb_stance_time"] != None: # If Hindlimb Stance is pre-determined
+                self.HL_st_ratio.set(str(self.Config_Options["hindlimb_stance_time"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["hindlimb_swing_time"] != None: # If Hindlimb Swing is pre-determined
+                self.HL_sw_ratio.set(str(self.Config_Options["hindlimb_swing_time"])) # Set the entry to display the pre-determined value
+            Step_Progressor = 4
         
     def add_fl_nums(self,*args): # Function to add forelimb ratios to find the total time
         try:
@@ -610,7 +630,6 @@ class MainWindow(tk.Tk):
             num_2 = 0.000000 # If not possible, set the ratio time to 0.000000
         num_3 = num_1 + num_2 # Sum the two ratio numbers together
         self.Forelimb_Ratio_Time_label['text'] = '{:.6f}'.format(num_3) # Format and display the sum time
-
 
     def add_hl_nums(self,*args): # Function to add hindlimb ratios to find the total time
         try:
@@ -632,15 +651,16 @@ class MainWindow(tk.Tk):
             self.Config_Options["forelimb_swing_time"] = float(self.FL_sw_ratio.get()) # Set Forelimb Swing Time to pre-determined value
             self.Config_Options["hindlimb_stance_time"] = float(self.HL_st_ratio.get()) # Set Hindlimb Stance Time to pre-determined value
             self.Config_Options["hindlimb_swing_time"] = float(self.HL_sw_ratio.get()) # Set Hindlimb Swing Time to pre-determined value
+            self.Config_Options["tot_ratio_time"] = float(self.Forelimb_Ratio_Time_label['text'])
+            print("apply move settings - " + str(self.Config_Options["tot_ratio_time"]))
         else:
             messagebox.showwarning(title="Ratio Error", message="Ratio times for Front and Hind Limbs do not match. Please fix and try again.")
             
-
     def close_move_box(self): # Function to close/destroy settings box
         self.ms_object_box.destroy() # Destroy/close move settings box
 
     def ask_for_target_dir(self):
-        self.rd_target_dir.set(str(fd.askdirectory()))
+        self.rd_target_dir.set(str(fdlg.askdirectory()))
 
     def open_record_data_box(self): # Function to open the record data settings box and populate it with the proper widgets
         self.rd_object_box = tk.Toplevel(self) # Create a new window for the Record Data settings box object
@@ -676,7 +696,7 @@ class MainWindow(tk.Tk):
         self.temp_output = tk.IntVar() # Create variable to store if temperature is to be recorded
         self.temp_output.set(0)# Set the checkbox to be unchecked
         temperature_output_cb = ttk.Checkbutton(master=frame_8,text="Temperature",variable=self.temp_output) # Create Checkbutton to select option to be recorded
-        apply_button = ttk.Button(master=frame_9,text="Apply") # Create apply button to set Config_Options dictionary to determined values
+        apply_button = ttk.Button(master=frame_9,text="Apply",command=self.apply_record_settings) # Create apply button to set Config_Options dictionary to determined values
         close_button = ttk.Button(master=frame_9,text="Close",command=self.close_record_data_box) # Create Close button to destroy/close data settings window
         select_target_dir_button.grid(row=0,column=0,pady=10) # Place button in tkinter window
         display_target_dir_label.grid(row=1,column=0,sticky=tk.W+tk.E,padx=5,pady=5) # Place label in tkinter window
@@ -729,7 +749,7 @@ class MainWindow(tk.Tk):
         self.Config_Options["temp_write"] = bool(self.temp_output.get()) # Set variable in Config_Options dictionary to input value
 
     def select_targ_dir(self): # Function to open up a file explorer window to select a target directory when the button is hit
-        selected_directory = fd.askdirectory() # Open up file explorer and ask for directory 
+        selected_directory = fdlg.askdirectory() # Open up file explorer and ask for directory 
         self.rd_target_dir.set(selected_directory) # Set the label to reflect the selected directory
 
     def close_record_data_box(self): # Function to close/delete the record data box
@@ -755,79 +775,162 @@ class MainWindow(tk.Tk):
         ss_footnote_label.grid(row=3,pady=5,padx=5) # Place footnote in tkinter window
         ss_footnote_label.config(wraplength = 275) # Place footnote in tkinter window
 
-    def save_settings_file(self): # Functino to save settings to external YAML file
+    def save_settings_file(self): # Function to save settings to external YAML file
         saved_settings_file = str(self.ss_settings_file_name.get()) + ".yml" # Extract name from entry and append .yml extension
         Write_Settings_Doc(self.Config_Options,saved_settings_file) # Write the settings to the YAML file with the designated name
 
     def close_save_settings_box(self): # Function to close/destroy save settings box
         self.ss_object_box.destroy() # Destroy/close save settings box
 
-    def detect_servos(self): # Function to detect which servos are connected to the ports of the resident raspberry pi
-        if self.Config_Options["baud_rate"] != None: # If the baud rate has been set
-            portHandler_1, portHandler_2, portHandler_3, portHandler_4, self.packetHandler = Packet_Port_Setup(self.Config_Options["baud_rate"]) # Create port handler and packet handler objects
-            self.port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4] # Append these objects to an easy to access list
-            dxl_data_list = PingServos(self.port_hand_list,self.packetHandler) # Ping the ports to identify which servos are connected to the raspberry pi through the ports
-            self.port_servo_dict, self.port_used_dict = Port_Servo_Assign(dxl_data_list,self.port_hand_list) # Create lists detailing which servos are assigned to which ports
-            for each_servo in self.port_used_dict.keys(): # For each servo in the port used 
-                detected_servo = "Servo " + str(each_servo) # Create text object of the servo
-                self.servo_listbox.insert(tk.END,detected_servo) # Add servo to listbox next to schematic
-                self.change_servo_color(each_servo,"yellow") # Change the color of the corresponding servo graphic to yellow - detected but not designated 
-            for each_port in self.port_used_dict.values():
-                if each_port == 1: # If port 1 is identified as being used
-                    self.port_1_indicator.config(fill=self.servo_colors["green"]) # Set the port 1 indicator to green
-                elif each_port == 2: # If port 2 is identified as being used
-                    self.port_2_indicator.config(fill=self.servo_colors["green"]) # Set the port 2 indicator to green
-                elif each_port == 3: # If port 3 is identified as being used
-                    self.port_3_indicator.config(fill=self.servo_colors["green"]) # Set the port 3 indicator to green
-        else:
-            messagebox.showerror(title="Error",message="Error - Baud Rate not assigned in global settings. Please fix and try again.")
+    def open_reboot_reset_box(self): # Function to open reboot / reset box and populate it with the proper widgets
+        self.rr_object_box = tk.Toplevel(self) # Create a new window for the Reboot / Reset box object
+        self.rr_object_box.geometry("430x300") # Set geometry of the reboot / reset box
+        self.rr_object_box.title("Reboot / Reset Window") #  Set title of the reboot / reset box
+        self.reset_mode = tk.IntVar() # Create variable to house the reset mode value
+        frame_13=tk.Frame(master=self.rr_object_box) # Create frame to house the entry and label of the reboot widgets
+        frame_14=tk.Frame(master=self.rr_object_box) # Create frame to house entry and label of reset widgets
+        frame_15=tk.Frame(master=self.rr_object_box) # Create frame to house the close button
+        reboot_section_label = ttk.Label(master=frame_13,text="Reboot")
+        reset_section_label = ttk.Label(master=frame_14,text="Reset")
+        reboot_description_label = ttk.Label(master=frame_13,text = "Turns the servo off and then on. Good for fixing stalled servos.")
+        reboot_description_label.config(wraplength = 150) # Set the wraplength so the text fits within the box
+        reset_description_label = ttk.Label(master=frame_14,text = "Factory Resets all servo trait values to default values. Options to keep one or two values are also available.")
+        reset_description_label.config(wraplength = 250) # Set the wraplength so the text fits within the box
+        reboot_button = ttk.Button(master=frame_13,text="Reboot",command=self.RebootServo)
+        reset_radio_button_1 = ttk.Radiobutton(master=frame_14,text="1 - reset all values (ID to 1, baudrate to 57600)",variable=self.reset_mode,value=0)
+        reset_radio_button_2 = ttk.Radiobutton(master=frame_14,text="2 - reset all values except ID (baudrate to 57600)",variable=self.reset_mode,value=1)
+        reset_radio_button_3 = ttk.Radiobutton(master=frame_14,text="3 - reset all values except ID and baudrate.",variable=self.reset_mode,value=2)
+        self.reset_mode.set(0)
+        reset_button = ttk.Button(master=frame_14,text="Reset",command=lambda b=self.reset_mode:self.ResetServo(b))
+        self.reboot_ind_canvas = tk.Canvas(master=frame_13,width=30,height=30) # Create small canvas to place indicator light
+        self.reb_indic_oval = self.reboot_ind_canvas.create_oval(10, 10, 30, 30)  # Create a circle on the Canvas
+        self.reset_ind_canvas = tk.Canvas(master=frame_14,width=30,height=30) # Create small canvas to place indicator light
+        self.res_indic_oval = self.reset_ind_canvas.create_oval(10, 10, 30, 30)  # Create a circle on the Canvas
+        self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["red"])
+        self.reset_ind_canvas.itemconfig(self.res_indic_oval, fill=self.servo_colors["red"])
+        separate_1 = ttk.Separator(master=self.rr_object_box,orient=tk.VERTICAL)
+        rr_close_button = ttk.Button(master=frame_15,text="Close",command=self.close_reboot_reset_box) # Create close button to destroy/close save settings box
+        frame_13.grid(row=0,column=0)
+        separate_1.grid(row=0,column=1,sticky=tk.N+tk.S)
+        frame_14.grid(row=0,column=2)
+        frame_15.grid(row=1,column=0,columnspan=3)
+        reboot_section_label.grid(row=0,column=0,sticky=tk.W+tk.E+tk.N,padx=5,pady=5)
+        reboot_description_label.grid(row=1,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
+        reboot_button.grid(row=5,column=0,sticky=tk.S,padx=5,pady=5)
+        self.reboot_ind_canvas.grid(row=6,column=0)
+        reset_section_label.grid(row=0,column=0,sticky=tk.W+tk.E+tk.N,padx=5,pady=5)
+        reset_description_label.grid(row=1,column=0,sticky=tk.W+tk.E+tk.N,padx=5,pady=5)
+        reset_radio_button_1.grid(row=2,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
+        reset_radio_button_2.grid(row=3,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
+        reset_radio_button_3.grid(row=4,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
+        reset_button.grid(row=5,column=0,sticky=tk.S,padx=5,pady=5)
+        self.reset_ind_canvas.grid(row=6,column=0)
+        rr_close_button.grid(row=0,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
+        
+    def close_reboot_reset_box(self): # Function to close/destroy reboot / reset box
+        self.rr_object_box.destroy()
 
+    def detect_servos(self): # Function to detect which servos are connected to the ports of the resident raspberry pi
+        global Step_Progressor
+        if Step_Progressor < 1:
+            messagebox.showerror(title="Error",message="Error - Global Settings not set yet. Cannot detect servos without global settings.")
+        else:
+            if self.Config_Options["baud_rate"] != None: # If the baud rate has been set
+                connected_servo_list = [] # Establish a list for all detected servos to be added to
+                connected_limb_list = [] # Establish a list for all detected limbs to be added to
+                portHandler_1, portHandler_2, portHandler_3, portHandler_4, self.packetHandler = Packet_Port_Setup(self.Config_Options["baud_rate"]) # Create port handler and packet handler objects
+                self.port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4] # Append these objects to an easy to access list
+                dxl_data_list = PingServos(self.port_hand_list,self.packetHandler) # Ping the ports to identify which servos are connected to the raspberry pi through the ports
+                self.port_servo_dict, self.port_used_dict = Port_Servo_Assign(dxl_data_list,self.port_hand_list) # Create lists detailing which servos are assigned to which ports
+                for each_servo in self.port_used_dict.keys(): # For each servo in the port used 
+                    detected_servo = "Servo " + str(each_servo) # Create text object of the servo
+                    self.servo_listbox.insert(tk.END,detected_servo) # Add servo to listbox next to schematic
+                    self.change_servo_color(each_servo,"yellow") # Change the color of the corresponding servo graphic to yellow - detected but not designated 
+                    connected_servo_list.append(each_servo) # Add each servo to the temporary variable connected_servo_list
+                self.Config_Options["connected_servos"] = connected_servo_list # Replace the settings variable with the now populated connected servo list
+                if(all(item in connected_servo_list for item in F_R_ARM)): # check if all front right leg servos are connected
+                    connected_limb_list.append(1) # If yes, append front right limb to connected limbs list
+                if(all(item in connected_servo_list for item in F_L_ARM)): # check if all front left leg servos are connected
+                    connected_limb_list.append(2) # If yes, append front left limb to connected limbs list
+                if(all(item in connected_servo_list for item in B_R_ARM)): # check if all back right leg servos are connected
+                    connected_limb_list.append(3) # If yes, append back right limb to connected limbs list
+                if(all(item in connected_servo_list for item in B_L_ARM)): # check if all back left leg servos are connected
+                    connected_limb_list.append(4) # If yes, append back left limb to connected limbs list
+                if(all(item in connected_servo_list for item in NECK)): # check if all neck servos are connected
+                    connected_limb_list.append(5) # If yes, append neck to connected limbs list
+                if(all(item in connected_servo_list for item in SPINE)): # check if all spine servos are connected
+                    connected_limb_list.append(6) # If yes, append spine to connected limbs list
+                if(all(item in connected_servo_list for item in TAIL)): # check if all tail servos are connected
+                    connected_limb_list.append(7) # If yes, append tail to connected limbs list
+                self.Config_Options["connected_limbs"] = connected_limb_list # Replace the settings variable with the now populated connected limb list
+                for each_port in self.port_used_dict.values():
+                    if each_port == 0: # If port 1 is identified as being used
+                        self.myCanvas.itemconfig(self.port_1_indicator,fill=self.servo_colors["green"]) # Set the port 1 indicator to green
+                    elif each_port == 1: # If port 2 is identified as being used
+                        self.myCanvas.itemconfig(self.port_2_indicator,fill=self.servo_colors["green"]) # Set the port 2 indicator to green
+                    elif each_port == 2: # If port 3 is identified as being used
+                        self.myCanvas.itemconfig(self.port_3_indicator,fill=self.servo_colors["green"]) # Set the port 3 indicator to green
+                Step_Progressor = 2
+            else:
+                messagebox.showerror(title="Error",message="Error - Baud Rate not assigned in global settings. Please fix and try again.")
             
     def mark_servo_move(self): # Function to mark the servos which should move
-        selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
-        for selection_num in selected_servos_tuple:
-            extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
-            separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
-            for servo_numb in separated_string:
-                if servo_numb.isdigit(): # Extract the number
-                    self.move_list.append(int(servo_numb)) # Append servo number to a list designated for servos that move, Starts with 0  
-        for selected_servo in self.move_list:
-            self.change_servo_color(selected_servo,"green") # Change the corresponding servo graphic to green - detected and designated to move
-        
-        if len(self.move_list) > 1:
-            self.Config_Options["servos_to_move"] = self.move_list # If there's more than one servo selected, change Config_Options variable to represent this
+        global Step_Progressor
+        if Step_Progressor < 2:
+            messagebox.showerror(title="Error",message="Error - Servos not yet detected. Cannot mark servos without detecting first.")
         else:
-            self.Config_Options["single_servo_to_move"] = self.move_list
-        self.stay_move_selected[0] = 1
-        if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
-            self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Change indicator light to red, servos are designated but the robot is not in home position
+            selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
+            for selection_num in selected_servos_tuple:
+                extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
+                separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
+                for servo_numb in separated_string:
+                    if servo_numb.isdigit(): # Extract the number
+                        self.move_list.append(int(servo_numb)) # Append servo number to a list designated for servos that move, Starts with 0  
+            self.confirmed_action[1] = []
+            for selected_servo in self.move_list:
+                self.change_servo_color(selected_servo,"green") # Change the corresponding servo graphic to green - detected and designated to move
+                self.confirmed_action[1].append(selected_servo)
+            if len(self.move_list) > 1:
+                self.Config_Options["servos_to_move"] = self.move_list # If there's more than one servo selected, change Config_Options variable to represent this
+                self.confirmed_action[0] = 2
+            else:
+                self.Config_Options["single_servo_to_move"] = self.move_list
+                self.confirmed_action[0] = 1
+            self.stay_move_selected[0] = 1
+            if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
+                self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Change indicator light to red, servos are designated but the robot is not in home position
+                Step_Progressor = 3
         
-
     def mark_servo_stay(self): # Function to mark the servos which should stay straight
-        selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
-        for selection_num in selected_servos_tuple:
-            extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
-            separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
-            for servo_numb in separated_string:
-                if servo_numb.isdigit(): # Extract the number
-                    self.dont_move_list.append(int(servo_numb)) # Append servo number to a list designated for servos that do not move,Starts with 0
-        for selected_servo in self.dont_move_list:
-            self.change_servo_color(selected_servo,"red") # Change the corresponding servo graphic to red - detected and designated to not move
-        if (17 in self.dont_move_list) and (18 in self.dont_move_list): # If body length servos are selected, change Config_Options variable to represent this
-            self.Config_Options["neck_straight"] = True
+        global Step_Progressor
+        if Step_Progressor < 2:
+            messagebox.showerror(title="Error",message="Error - Servos not yet detected. Cannot mark servos without detecting first.")
         else:
-            self.Config_Options["neck_straight"] = False
-        if (19 in self.dont_move_list) and (20 in self.dont_move_list) and (21 in self.dont_move_list) and (22 in self.dont_move_list):
-            self.Config_Options["spine_straight"] = True
-        else:
-            self.Config_Options["spine_straight"] = False
-        if (23 in self.dont_move_list) and (24 in self.dont_move_list):
-            self.Config_Options["tail_straight"] = True
-        else:
-            self.Config_Options["tail_straight"] = False
-        self.stay_move_selected[1] = 1
-        if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
-            self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Change indicator light to red, servos are designated but the robot is not in home position
+            selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
+            for selection_num in selected_servos_tuple:
+                extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
+                separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
+                for servo_numb in separated_string:
+                    if servo_numb.isdigit(): # Extract the number
+                        self.dont_move_list.append(int(servo_numb)) # Append servo number to a list designated for servos that do not move,Starts with 0
+            for selected_servo in self.dont_move_list:
+                self.change_servo_color(selected_servo,"red") # Change the corresponding servo graphic to red - detected and designated to not move
+            if (17 in self.dont_move_list) or (18 in self.dont_move_list): # If body length servos are selected, change Config_Options variable to represent this
+                self.Config_Options["neck_straight"] = True
+            else:
+                self.Config_Options["neck_straight"] = False
+            if (19 in self.dont_move_list) or (20 in self.dont_move_list) or (21 in self.dont_move_list) or (22 in self.dont_move_list):
+                self.Config_Options["spine_straight"] = True
+            else:
+                self.Config_Options["spine_straight"] = False
+            if (23 in self.dont_move_list) or (24 in self.dont_move_list):
+                self.Config_Options["tail_straight"] = True
+            else:
+                self.Config_Options["tail_straight"] = False
+            self.stay_move_selected[1] = 1
+            if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
+                self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Change indicator light to red, servos are designated but the robot is not in home position
+                Step_Progressor = 3
 
     def change_servo_color(self,num_in,color_change): # Function to change the color of the corresponding servo in the schematic
         if (num_in >= 1 and num_in <= 24) and (color_change in self.servo_colors.keys()): # If the servo number entered into the function is one of the ones displayed on the schematic, and the color put into the function is one in the dictionary
@@ -836,76 +939,163 @@ class MainWindow(tk.Tk):
             print("Color or Servo Input not correct. Fix and try again.")
 
     def tilibot_get_ready(self): # Function to create servo and limb objects and move them to home position
-        Obj_list = [] # Create an empty list to house both the servo objects and the limb objects
-        if 0 in self.stay_move_selected: # If both stay and move objects have been selected
-            messagebox.showwarning(title="Move Selection Error", message="Servos have not been selected to either Move or Stay Still. Please fix and try again.")
-            return
-        config_array = list(self.Config_Options.values())
-        self.ServosDictionary = Create_DigitalServos(config_array,self.port_used_dict,self.PositionsMatrix,
-            self.SpeedMatrix) # Create a dictionary of digital servo objects to represent physical servos in digital space
-        Obj_list.append(self.ServosDictionary) # Append the dictionary to the object list
-        if any(config_array[6]):
-            LimbDictionary = Create_DigitalLimbs(config_array[6],self.ServosDictionary) # Create a dictionary of digital limb objects to represent physical servos in digital space
-            Obj_list.append(LimbDictionary) # Append the dictionary to the object list
-        if self.confirmed_action[0] == 1: # Move Single Servo
-            servo_to_move = self.ServosDictionary[self.confirmed_action[1]] # Identify single servo to move object
-            servo_to_move.InitialSetup(self.port_servo_dict[servo_to_move.ID],config_array[31]) # Run digital servo through initial setup protocol to set system variables
-            servo_to_move.ToggleTorque(1,self.port_servo_dict[servo_to_move.ID])  # Turn the torque on so the servo may move on command
-            servo_to_move.MoveHome(config_array[17],self.port_servo_dict[servo_to_move.ID]) # Send servo to actual starting position (first position in stride)
-        elif self.confirmed_action[0] == 2: # Move Numerous Servos
-            if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
-                if (config_array[28] == True) and (config_array[29] == True) and (config_array[30] == True): # If neck, spine, and tail are all designated to stay straight
-                    for each_spine_servo in BODY_LENGTH:
-                        self.ServosDictionary[each_spine_servo].InitialSetup(self.port_servo_dict[each_spine_servo]) # Run digital body length servos through initial setup protocol to set system variables
+        global Step_Progressor
+        if Step_Progressor < 5:
+            messagebox.showerror(title="Error",message="Error - Kinematics File not loaded. Cannot move servos without loaded Kinematics File.")
+        else:
+            Obj_list = [] # Create an empty list to house both the servo objects and the limb objects
+            if 0 in self.stay_move_selected: # If both stay and move objects have been selected
+                messagebox.showwarning(title="Move Selection Error", message="Servos have not been selected to either Move or Stay Still. Please fix and try again.")
+                return
+            config_array = list(self.Config_Options.values())
+            servo_list_fix = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+            limb_list_fix = [False, False, False, False,False, False, False]
+            limb_servo_count = [0,0,0,0,0,0,0]
+            for i in DXL_ID:
+                if i in config_array[5]:
+                    servo_list_fix[i-1] = True
+                    if i in F_R_ARM:
+                        limb_servo_count[0] += 1
+                    elif i in F_L_ARM:
+                        limb_servo_count[1] += 1
+                    elif i in B_R_ARM:
+                        limb_servo_count[2] += 1
+                    elif i in B_L_ARM:
+                        limb_servo_count[3] += 1
+                    elif i in NECK:
+                        limb_servo_count[4] += 1
+                    elif i in SPINE:
+                        limb_servo_count[5] += 1
+                    elif i in TAIL:
+                        limb_servo_count[6] += 1
+                else:
+                    servo_list_fix[i-1] = False
+            if limb_servo_count[0] == 4:
+                limb_list_fix[0] = True
+            else:
+                limb_list_fix[0] = False
+            if limb_servo_count[1] == 4:
+                limb_list_fix[1] = True
+            else:
+                limb_list_fix[1] = False
+            if limb_servo_count[2] == 4:
+                limb_list_fix[2] = True
+            else:
+                limb_list_fix[2] = False
+            if limb_servo_count[3] == 4:
+                limb_list_fix[3] = True
+            else:
+                limb_list_fix[3] = False
+            if limb_servo_count[4] == 2:
+                limb_list_fix[4] = True
+            else:
+                limb_list_fix[4] = False
+            if limb_servo_count[5] == 4:
+                limb_list_fix[5] = True
+            else:
+                limb_list_fix[5] = False
+            if limb_servo_count[6] == 2:
+                limb_list_fix[6] = True
+            else:
+                limb_list_fix[6] = False
+            config_array[5] = servo_list_fix
+            config_array[6] = limb_list_fix
+            self.stride_numbers = (config_array[4], config_array[2]) # Stride amount and positions per stride
+            # if self.record_yesno.get() == 1:
+            #     self.record_array[0] = True
+            # else:
+            #     self.record_array[0] = False
+            self.record_array = RecordPreferences(config_array)
+            self.ServosDictionary = Create_DigitalServos(config_array,self.port_used_dict,self.PositionsMatrix,
+                self.SpeedMatrix) # Create a dictionary of digital servo objects to represent physical servos in digital space
+            Obj_list.append(self.ServosDictionary) # Append the dictionary to the object list
+            if any(config_array[6]):
+                LimbDictionary = Create_DigitalLimbs(config_array[6],self.ServosDictionary) # Create a dictionary of digital limb objects to represent physical servos in digital space
+                Obj_list.append(LimbDictionary) # Append the dictionary to the object list
+            if self.confirmed_action[0] == 1: # Move Single Servo
+                servo_to_move = self.ServosDictionary[self.confirmed_action[1]] # Identify single servo to move object
+                servo_to_move.InitialSetup(self.port_servo_dict[servo_to_move.ID],config_array[31]) # Run digital servo through initial setup protocol to set system variables
+                servo_to_move.ToggleTorque(1,self.port_servo_dict[servo_to_move.ID])  # Turn the torque on so the servo may move on command
+                servo_to_move.MoveHome(config_array[17],self.port_servo_dict[servo_to_move.ID]) # Send servo to actual starting position (first position in stride)
+            elif self.confirmed_action[0] == 2: # Move Numerous Servos
+                if (config_array[28] == True):
+                    for each_spine_servo in list(set(self.ServosDictionary.keys()).intersection(set(NECK))):
+                        self.ServosDictionary[each_spine_servo].InitialSetup(self.port_servo_dict[each_spine_servo],False) # Run digital body length servos through initial setup protocol to set system variables
                         self.ServosDictionary[each_spine_servo].ToggleTorque(1,self.port_servo_dict[each_spine_servo]) # Turn the torque on so the servos may move on command
-                    StraightenSpine(self.ServosDictionary,LimbDictionary,self.port_hand_list,self.packetHandler,config_array[32]) # Straighten the spine to keep it stiff for movement
-            for each_servo in self.confirmed_action[1]:
-                self.ServosDictionary[each_servo].InitialSetup(self.port_servo_dict[each_servo],config_array[31]) # Run digital limb servos through initial setup protocol to set system variables
-                self.ServosDictionary[each_servo].ToggleTorque(1,self.port_servo_dict[each_servo]) # Turn the torque on so the servos may move on command
-            Move_Spider_Up(self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"],self.Config_Options["run_digital_only"]) # Move servos to spider position where the legs are raised up in the air
-            Move_Spider_Down(self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"], self.Config_Options["run_digital_only"]) # Move servos to spider position where it raises itself up off the ground
-            for each_servo in self.confirmed_action[1]:
-                self.ServosDictionary[each_servo].MoveHome(config_array[17],self.port_servo_dict[each_servo]) # Send servos to actual starting position (first position in stride)
-        self.indicator_canvas.itemconfig(self.indic_oval, fill="yellow") # Change 
+                if (config_array[29] == True):
+                    for each_spine_servo in list(set(self.ServosDictionary.keys()).intersection(set(SPINE))):
+                        self.ServosDictionary[each_spine_servo].InitialSetup(self.port_servo_dict[each_spine_servo],False) # Run digital body length servos through initial setup protocol to set system variables
+                        self.ServosDictionary[each_spine_servo].ToggleTorque(1,self.port_servo_dict[each_spine_servo]) # Turn the torque on so the servos may move on command
+                if (config_array[30] == True): # If neck, spine, and tail are all designated to stay straight
+                    for each_spine_servo in list(set(self.ServosDictionary.keys()).intersection(set(TAIL))):
+                        self.ServosDictionary[each_spine_servo].InitialSetup(self.port_servo_dict[each_spine_servo],False) # Run digital body length servos through initial setup protocol to set system variables
+                        self.ServosDictionary[each_spine_servo].ToggleTorque(1,self.port_servo_dict[each_spine_servo]) # Turn the torque on so the servos may move on command
+                StraightenSpine(self.ServosDictionary,self.port_hand_list,self.packetHandler,config_array[32]) # Straighten the spine to keep it stiff for movement
+                for each_servo in self.confirmed_action[1]:
+                    self.ServosDictionary[each_servo].InitialSetup(self.port_servo_dict[each_servo],False) # Run digital limb servos through initial setup protocol to set system variables
+                    self.ServosDictionary[each_servo].ToggleTorque(1,self.port_servo_dict[each_servo]) # Turn the torque on so the servos may move on command
+                Move_Spider_Up(self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"],self.Config_Options["run_digital_only"]) # Move servos to spider position where the legs are raised up in the air
+                time.sleep(2)
+                Move_Spider_Down(self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"], self.Config_Options["run_digital_only"]) # Move servos to spider position where it raises itself up off the ground
+                time.sleep(2)
+                for each_servo in self.confirmed_action[1]:
+                    self.ServosDictionary[each_servo].MoveHome(config_array[17],self.port_servo_dict[each_servo]) # Send servos to actual starting position (first position in stride)
+            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["yellow"]) # Change 
+            Step_Progressor = 6
             
     def tilibot_run(self): # Function to run the robot through one trial
-        self.indicator_canvas.itemconfig(self.indic_oval, fill="green") # Set the indicator light to green, indicating the robot is now running a trial
-        config_array = list(self.Config_Options.values()) # Creat a config_array list using the dictionary values
-        if self.confirmed_action[0] == 1: # Move One Servo
-            servo_to_move = self.ServosDictionary[self.confirmed_action[1]] # Fetch the servo object that is desired to move
-            start_time = time.time() # Set a base time using the clock on the running computer
-            out_data = servo_to_move.ContinuousMove(self.port_servo_dict[servo_to_move.ID], self.stride_numbers, self.record_array, start_time) # Go through using the Continuous Move Function for the corresponding servo
-            if config_array[32] == False: # If run digital only is set to false
-                if self.record_array[0] == True: # If recording data is set to true
-                    Write_Doc(self.record_array,out_data) # Write the data to the desired document
-        elif self.confirmed_action[0] == 2: # Move Numerous Servos
-            start_time = time.time() # Set a base time using the clock on the running computer
-            out_data = MoveNumerousServos(self.confirmed_action[1],self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
-                self.packetHandler,self.stride_numbers,self.record_array, start_time,config_array[32]) # Go through using the Continuous Move Function for the corresponding servos
-            record_time = time.time() # Set a base End Time using the clock on the running computer
-            end_time = record_time - start_time # Calculate the amount of time that passed over the trial
-            self.act_end_time.set('{:.3f}'.format(end_time)) # Format the time difference as a string for display
-            if config_array[32] == False: # If run digital only is set to false
-                if self.record_array[0] == True: # If recording data is set to true
-                    Write_Doc(self.record_array,out_data) # Write the data to the desired document
-        self.indicator_canvas.itemconfig(self.indic_oval, fill="#6600CC") # Set the indicator to purple, indicating the robot is finished running the current trial
+        global Step_Progressor
+        if Step_Progressor < 6:
+            messagebox.showerror(title="Error",message="Error - Global Settings not set yet. Cannot detect servos without global settings.")
+        else:
+            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["green"]) # Set the indicator light to green, indicating the robot is now running a trial
+            print("In Tilibot Run - Start")
+            config_array = list(self.Config_Options.values()) # Creat a config_array list using the dictionary values
+            if self.confirmed_action[0] == 1: # Move One Servo
+                print("Move One Servo - Detected")
+                servo_to_move = self.ServosDictionary[self.confirmed_action[1]] # Fetch the servo object that is desired to move
+                start_time = time.time() # Set a base time using the clock on the running computer
+                out_data = servo_to_move.ContinuousMove(self.port_servo_dict[servo_to_move.ID], self.stride_numbers, self.record_array, start_time) # Go through using the Continuous Move Function for the corresponding servo
+                if config_array[32] == False: # If run digital only is set to false
+                    if self.record_array[0] == True: # If recording data is set to true
+                        Write_Doc(self.record_array,out_data) # Write the data to the desired document
+            elif self.confirmed_action[0] == 2: # Move Numerous Servos
+                print("Move Multiple Servos Detected")
+                start_time = time.time() # Set a base time using the clock on the running computer
+                out_data = MoveNumerousServos(self.confirmed_action[1],self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
+                    self.packetHandler,self.stride_numbers,self.record_array, start_time,config_array[32]) # Go through using the Continuous Move Function for the corresponding servos
+                record_time = time.time() # Set a base End Time using the clock on the running computer
+                end_time = record_time - start_time # Calculate the amount of time that passed over the trial
+                self.act_end_time.set('{:.3f}'.format(end_time)) # Format the time difference as a string for display
+                if config_array[32] == False: # If run digital only is set to false
+                    if self.record_array[0] == True: # If recording data is set to true
+                        Write_Doc(self.record_array,out_data) # Write the data to the desired document
+            self.indicator_canvas.itemconfig(self.indic_oval, fill="#6600CC") # Set the indicator to purple, indicating the robot is finished running the current trial
+            Step_Progressor = 7
 
     def tilibot_reset(self): # Function to reset the robot for running more trials
-        self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Set the indicator to red, indicating the robot is not at home position but ready to run
+        global Step_Progressor
+        self.indicator_canvas.itemconfig(self.indic_oval, fill="#FFA500") # Set the indicator to orange, indicating the robot is not at home position but ready to run
+
+        self.act_end_time.set("0.000") # Set the starting time to 0 second float
         Reset_For_Run(self.ServosDictionary,self.port_hand_list) # Kill the torque but keep all other values the same. 
+        Step_Progressor = 5
 
     def tilibot_shutdown(self): # Function to shut down the robot and program after user is done running trials
-        CleanUp(self.ServosDictionary,self.port_hand_list) # Perform the clean-up process by which the torque is turned off on all servos and the program is shut down
-        ShutDown() # Execute the shutdown process
-        self.destroy() # Destroy the tkinter main window
+        try:
+            CleanUp(self.ServosDictionary,self.port_hand_list) # Perform the clean-up process by which the torque is turned off on all servos and the program is shut down
+            ShutDown() # Execute the shutdown process
+        finally:
+            self.destroy() # Destroy the tkinter main window
 
     def load_settings_file(self): # Function to load the settings file into the universal configuration dictionary 
-        desired_load_file = fd.askopenfilename() # Ask the user to open the settings file
+        global Step_Progressor
+        desired_load_file = fdlg.askopenfilename() # Ask the user to open the settings file
         config_array = read_config_file(desired_load_file) # Read the configuration file into a configuration array 
-        [invalidate_value, self.confirmed_action] = check_config_file(config_array) # Check the assembled configuration array for any errors and return a desired action
+        [invalidate_value, self.confirmed_action] = check_config_file(config_array,GUI_or_TERMINAL) # Check the assembled configuration array for any errors and return a desired action
         self.record_array = RecordPreferences(config_array) # Return what the recording preferences are 
         self.stride_numbers = (config_array[4], config_array[2]) # Stride amount and positions per stride
-        self.set_file_display.set(desired_load_file)
+        self.set_file_display.set(desired_load_file) # Change the display label to reflect the loaded file
         if invalidate_value == True: # If there is an error, shut the program down 
             print("Shutting Down Tilibot...")
             exit()
@@ -955,19 +1145,261 @@ class MainWindow(tk.Tk):
                 self.record_yesno.set(1)
             else:
                 self.record_yesno.set(0)
+            Step_Progressor = 5
             
-
     def load_kinem_file(self): # Function to load the kinematics file when the button is pressed
-        self.Config_Options["positions_file"] = fd.askopenfilename() # Set the positions_file dictionary variable to the name of the file selected
-        self.kin_file_display.set(self.Config_Options["positions_file"]) # Change the display widget at the bottom fo the window to display the name of the file selected
-        preprocessed_positions = ReadServoAngles(self.Config_Options["positions_file"]) # Read the angles within the file and determine the servo positions 
-        self.PositionsMatrix = PostProcessPositions(preprocessed_positions) # Process the servo positions further to be easier to use and manipulate
-        self.SpeedMatrix = DetermineSpeeds(self.Config_Options["stride_time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
-            self.Config_Options["position_amount"],list(self.Config_Options.values()))
-        
+        global Step_Progressor
+        if Step_Progressor < 4:
+            messagebox.showerror(title="Error",message="Error - Cannot load Kinematics File. Move Settings must be set before the Kinematics file may be loaded.")
+        elif Step_Progressor >= 5:
+            preprocessed_positions = ReadServoAngles(self.Config_Options["positions_file"]) # Read the angles within the file and determine the servo positions 
+            self.PositionsMatrix = PostProcessPositions(preprocessed_positions) # Process the servo positions further to be easier to use and manipulate
+            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["stride_time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
+                self.Config_Options["position_amount"],list(self.Config_Options.values()))
+            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["orange"])
+        elif Step_Progressor == 4:
+            self.Config_Options["positions_file"] = fdlg.askopenfilename() # Set the positions_file dictionary variable to the name of the file selected
+            self.kin_file_display.set(self.Config_Options["positions_file"]) # Change the display widget at the bottom of the window to display the name of the file selected
+            preprocessed_positions = ReadServoAngles(self.Config_Options["positions_file"]) # Read the angles within the file and determine the servo positions 
+            self.PositionsMatrix = PostProcessPositions(preprocessed_positions) # Process the servo positions further to be easier to use and manipulate
+            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["stride_time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
+                self.Config_Options["position_amount"],list(self.Config_Options.values()))
+            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["orange"])
+            Step_Progressor = 5
+
+    def RebootServo(self): # Function to Reboot the servos when required
+        self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["yellow"])
+        reboot_list = []
+        selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
+        for selection_num in selected_servos_tuple:
+            extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
+            separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
+            for servo_numb in separated_string:
+                if servo_numb.isdigit(): # Extract the number
+                    reboot_list.append(int(servo_numb)) # Append servo number to a list designated for servos that move, Starts with 0
+        for servo_num in reboot_list:
+            if self.port_used_dict[servo_num] == 0:
+                if self.port_hand_list[0].openPort():
+                    if self.port_hand_list[0].setBaudRate(self.Config_Options["baud_rate"]):
+                        print("Succeeded to change the baudrate for port 1")
+                    else:
+                        print("Failed to change the baudrate - 1")
+                else:
+                    print("Failed to open the port - 1")
+                # Try reboot
+                # Dynamixel LED will flicker while it reboots
+                dxl_comm_result, dxl_error = self.packetHandler.reboot(self.port_hand_list[0], servo_num)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                print("[ID:%03d] reboot Succeeded\n" % servo_num)
+            elif self.port_used_dict[servo_num] == 1:
+                if self.port_hand_list[1].openPort():
+                    if self.port_hand_list[1].setBaudRate(self.Config_Options["baud_rate"]):
+                        print("Succeeded to change the baudrate for port 2")
+                    else:
+                        print("Failed to change the baudrate - 2")
+                else:
+                    print("Failed to open the port - 2")
+                # Try reboot
+                # Dynamixel LED will flicker while it reboots
+                dxl_comm_result, dxl_error = self.packetHandler.reboot(self.port_hand_list[1], servo_num)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                print("[ID:%03d] reboot Succeeded\n" % servo_num)
+            elif self.port_used_dict[servo_num] == 2:
+                if self.port_hand_list[2].openPort():
+                    if self.port_hand_list[2].setBaudRate(self.Config_Options["baud_rate"]):
+                        print("Succeeded to change the baudrate for port 3")
+                    else:
+                        print("Failed to change the baudrate - 3")
+                else:
+                    print("Failed to open the port - 3")
+                # Try reboot
+                # Dynamixel LED will flicker while it reboots
+                dxl_comm_result, dxl_error = self.packetHandler.reboot(self.port_hand_list[2], servo_num)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                print("[ID:%03d] reboot Succeeded\n" % servo_num)
+                self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["red"])
+        self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["green"])
+
+    def ResetServo(self,reset_value): # Function to Reset the servos when required
+        self.reset_ind_canvas.itemconfig(self.res_indic_oval, fill=self.servo_colors["yellow"])
+        #resets settings of Dynamixel to default values. The Factory reset function has three operation modes:
+        #0xFF : reset all values (ID to 1, baudrate to 57600)
+        #0x01 : reset all values except ID (baudrate to 57600)
+        #0x02 : reset all values except ID and baudrate.
+        if reset_value == 1:
+            OPERATION_MODE = 0xFF
+        elif reset_value == 2:
+            OPERATION_MODE = 0x01
+        elif reset_value == 3:
+            OPERATION_MODE = 0x02
+        else:
+            print("Reset value not recognized. Please fix and try again.")
+            quit()
+        reset_list = []
+        selected_servos_tuple = self.servo_listbox.curselection() # Get which servos from the listbox have been highlighted/selected
+        for selection_num in selected_servos_tuple:
+            extracted_string = self.servo_listbox.get(selection_num) # Get the selected strings
+            separated_string = extracted_string.split() # Split the string into the word "Servo" and the number
+            for servo_numb in separated_string:
+                if servo_numb.isdigit(): # Extract the number
+                    reset_list.append(int(servo_numb)) # Append servo number to a list designated for servos that move, Starts with 0
+        for servo_num in reset_list:
+            if self.port_used_dict[servo_num] == 0:
+                # Try factory reset
+                print("[ID:%03d] Try factoryreset : " % (servo_num))
+                dxl_comm_result, dxl_error = self.packetHandler.factoryReset(self.port_hand_list[0], servo_num, OPERATION_MODE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("Aborted")
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+            elif self.port_used_dict[servo_num] == 1:
+               # Try factory reset
+                print("[ID:%03d] Try factoryreset : " % (servo_num))
+                dxl_comm_result, dxl_error = self.packetHandler.factoryReset(self.port_hand_list[1], servo_num, OPERATION_MODE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("Aborted")
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+            elif self.port_used_dict[servo_num] == 2:
+               # Try factory reset
+                print("[ID:%03d] Try factoryreset : " % (servo_num))
+                dxl_comm_result, dxl_error = self.packetHandler.factoryReset(self.port_hand_list[2], servo_num, OPERATION_MODE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("Aborted")
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+            # Wait for reset
+            print("Wait for reset...")
+            time.sleep(2.0)
+            print("[ID:%03d] factoryReset Success!" % (servo_num))
+            if self.port_used_dict[servo_num] == 0:
+                # Set controller baudrate to Dynamixel default baudrate
+                if self.port_hand_list[0].setBaudRate(FACTORYRST_DEFAULTBAUDRATE):
+                    print("Succeeded to change the controller baudrate to : %d" % FACTORYRST_DEFAULTBAUDRATE)
+                else:
+                    print("Failed to change the controller baudrate")
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[0], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] DXL baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+                # Write new baudnum
+                dxl_comm_result, dxl_error = self.packetHandler.write1ByteTxRx(self.port_hand_list[0], servo_num, ADDR_PRO_BAUDRATE, NEW_BAUDNUM)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
+                # Set port baudrate to BAUDRATE
+                if self.port_hand_list[0].setBaudRate(self.Config_Options["baud_rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                else:
+                    print("Failed to change the controller baudrate")
+                time.sleep(0.2)
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[0], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Dynamixel Baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+            elif self.port_used_dict[servo_num] == 1:
+                # Set controller baudrate to Dynamixel default baudrate
+                if self.port_hand_list[1].setBaudRate(FACTORYRST_DEFAULTBAUDRATE):
+                    print("Succeeded to change the controller baudrate to : %d" % FACTORYRST_DEFAULTBAUDRATE)
+                else:
+                    print("Failed to change the controller baudrate")
+                    print("Press any key to terminate...")
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[1], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] DXL baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+                # Write new baudnum
+                dxl_comm_result, dxl_error = self.packetHandler.write1ByteTxRx(self.port_hand_list[1], servo_num, ADDR_PRO_BAUDRATE, NEW_BAUDNUM)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
+                # Set port baudrate to BAUDRATE
+                if self.port_hand_list[1].setBaudRate(self.Config_Options["baud_rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                else:
+                    print("Failed to change the controller baudrate")
+                    print("Press any key to terminate...")
+                time.sleep(0.2)
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[1], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Dynamixel Baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+            elif self.port_used_dict[servo_num] == 2:
+                # Set controller baudrate to Dynamixel default baudrate
+                if self.port_hand_list[0].setBaudRate(FACTORYRST_DEFAULTBAUDRATE):
+                    print("Succeeded to change the controller baudrate to : %d" % FACTORYRST_DEFAULTBAUDRATE)
+                else:
+                    print("Failed to change the controller baudrate")
+                    print("Press any key to terminate...")
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[2], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] DXL baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+                # Write new baudnum
+                dxl_comm_result, dxl_error = self.packetHandler.write1ByteTxRx(self.port_hand_list[2], servo_num, ADDR_PRO_BAUDRATE, NEW_BAUDNUM)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
+                # Set port baudrate to BAUDRATE
+                if self.port_hand_list[2].setBaudRate(self.Config_Options["baud_rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                else:
+                    print("Failed to change the controller baudrate")
+                    print("Press any key to terminate...")
+                time.sleep(0.2)
+                # Read Dynamixel baudnum
+                dxl_baudnum_read, dxl_comm_result, dxl_error = self.packetHandler.read1ByteTxRx(self.port_hand_list[2], servo_num, ADDR_PRO_BAUDRATE)
+                if dxl_comm_result != COMM_SUCCESS:
+                    print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
+                elif dxl_error != 0:
+                    print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+                else:
+                    print("[ID:%03d] Dynamixel Baudnum is now : %d" % (servo_num, dxl_baudnum_read))
+        self.reset_ind_canvas.itemconfig(self.res_indic_oval, fill=self.servo_colors["green"])
 
 if __name__ == "__main__": # Run if function is called directly instead of indirectly
+    
     root = MainWindow() # Create a MainWindow Object labeled root
 
     root.mainloop() # Run root through the mainloop
-
