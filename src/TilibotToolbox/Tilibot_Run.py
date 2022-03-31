@@ -29,7 +29,7 @@ else:
         return ch
 
 config_array = read_config_file("Tilibot_Configuration_File.yml")
-[invalidate_value, confirmed_action] = check_config_file(config_array)
+[invalidate_value, confirmed_action] = check_config_file(config_array,GUI_or_TERMINAL)
 record_array = RecordPreferences(config_array)
 stride_numbers = (config_array[4], config_array[2]) # Stride amount and positions per stride
 
@@ -56,7 +56,7 @@ SpeedMatrix = DetermineSpeeds(config_array[3],PositionsMatrix,config_array[2],co
 print("Speeds Calculated.")
 
 Obj_list = []
-ServosDictionary = Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix,config_array[32])
+ServosDictionary = Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix)
 Obj_list.append(ServosDictionary)
 
 # Limb Objects may not be necessary 
@@ -83,40 +83,64 @@ if confirmed_action[0] == 1: # Move Single Servo
         if record_array[0] == True:
             Write_Doc(record_array,out_data)
 elif confirmed_action[0] == 2: # Move Numerous Servos
-    if all(each_limb in LimbDictionary for each_limb in BODY_LENGTH_LIMB_IDS):
-        if (config_array[28] == True) and (config_array[29] == True) and (config_array[30] == True):
-            for each_spine_servo in BODY_LENGTH:
-                ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo])
+    while 1:
+        if (config_array[28] == True):
+            for each_spine_servo in list(set(ServosDictionary.keys()).intersection(set(NECK))):
+                ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo],config_array[31])
                 ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
-                print("#############################################################")
-            print("\nStraightening Spine - ")
-            StraightenSpine(ServosDictionary,LimbDictionary,port_hand_list,packetHandler,config_array[32])
-            print("Spine Straightened. Moving to Legs.\n")
-    for each_servo in confirmed_action[1]:
-        ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo],config_array[31])
-        ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
-# Move Servo to Spider Stance
-# Move Servos to Floor and Push Up
-    Move_Spider_Up(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17],config_array[32])
-    Move_Spider_Down(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17], config_array[32])
-    for each_servo in confirmed_action[1]:
-        ServosDictionary[each_servo].MoveHome(config_array[17],port_servo_dict[each_servo])
-    print("Servos have been moved to Home Position.")
-    print("Please press enter when you are ready to begin.\n")
-    getch()
-    print("*********************************************************")
-    start_time = time.time()
-    out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,port_servo_dict,
-        packetHandler,stride_numbers,record_array, start_time,config_array[32])
-    record_time = time.time()
-    end_time = record_time - start_time
-    print("\n*********************************************************")
-    print("End Time: %f" %(end_time))
-    print("*********************************************************\n")
-    if config_array[32] == False:
-        if record_array[0] == True:
-            Write_Doc(record_array,out_data)
-
+        if (config_array[29] == True):
+            for each_spine_servo in list(set(ServosDictionary.keys()).intersection(set(SPINE))):
+                ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo],config_array[31])
+                ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
+        if (config_array[30] == True):
+            for each_spine_servo in list(set(ServosDictionary.keys()).intersection(set(TAIL))):
+                ServosDictionary[each_spine_servo].InitialSetup(port_servo_dict[each_spine_servo],config_array[31])
+                ServosDictionary[each_spine_servo].ToggleTorque(1,port_servo_dict[each_spine_servo])
+        print("#############################################################")
+        print("\nStraightening Spine - ")
+        StraightenSpine(ServosDictionary,port_hand_list,packetHandler,config_array[32])
+        print("Spine Straightened. Moving to Legs.\n")
+        for each_servo in confirmed_action[1]:
+            ServosDictionary[each_servo].InitialSetup(port_servo_dict[each_servo],config_array[31])
+            ServosDictionary[each_servo].ToggleTorque(1,port_servo_dict[each_servo])
+    # Move Servo to Spider Stance
+    # Move Servos to Floor and Push Up
+        Move_Spider_Up(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17],config_array[32])
+        time.sleep(2)
+        Move_Spider_Down(confirmed_action[1], ServosDictionary, port_hand_list, port_servo_dict, packetHandler,config_array[17], config_array[32])
+        time.sleep(2)
+        for each_servo in confirmed_action[1]:
+            ServosDictionary[each_servo].MoveHome(config_array[17],port_servo_dict[each_servo])
+        print("Servos have been moved to Home Position.")
+        print("Please press enter when you are ready to begin.\n")
+        getch()
+        print("*********************************************************")
+        start_time = time.time()
+        out_data = MoveNumerousServos(confirmed_action[1],ServosDictionary,port_hand_list,port_servo_dict,
+            packetHandler,stride_numbers,record_array, start_time,config_array[32])
+        record_time = time.time()
+        end_time = record_time - start_time
+        print("\n*********************************************************")
+        print("End Time: %f" %(end_time))
+        print("*********************************************************\n")
+        if config_array[32] == False:
+            if record_array[0] == True:
+                Write_Doc(record_array,out_data)
+        break_var = 0
+        while break_var == 0:        
+            run_again = input("Run again?(Y/n)")
+            if run_again.lower() == "y" or run_again.lower() == "yes":
+                break_var = 1
+                break
+            elif (run_again.lower() == "n" or run_again.lower() == "no"):
+                break_var = -1
+                break
+            else:
+                print("Not a recognized option. Please try again.\n")
+        if break_var == 1:
+            continue
+        elif break_var == -1:
+            break
 print("Shutting down Tilibot. Please press enter.")
 getch()
 CleanUp(ServosDictionary,port_hand_list)
