@@ -91,8 +91,8 @@ COMM_TX_FAIL                = -1001                         # Communication Tx F
 
 TORQUE_ON                   = 1                 # Value for enabling the torque
 TORQUE_OFF                  = 0                 # Value for disabling the torque
-DXL_MINIMUM_POSITION_VALUE  = 10           # Dynamixel will rotate between this value
-DXL_MAXIMUM_POSITION_VALUE  = 4000            # and this value (note that the Dynamixel would not move when the position value is out of movable range. Check e-manual about the range of the Dynamixel you use.)
+DXL_MINIMUM_POSITION_VALUE  = 10                # Dynamixel will rotate between this value
+DXL_MAXIMUM_POSITION_VALUE  = 4000              # and this value (note that the Dynamixel would not move when the position value is out of movable range. Check e-manual about the range of the Dynamixel you use.)
 DXL_MOVING_STATUS_THRESHOLD = 20                # Dynamixel moving status threshold
 
 # Data Byte Length
@@ -111,7 +111,7 @@ STRAIGHT_SPEED = 50
 STRAIGHT_SPINE_ARRAY = [STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE, STRAIGHT_SPINE]
 STRAIGHT_SPEED_ARRAY = [STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED, STRAIGHT_SPEED]
 
-SPIDER_UP = {1:2048,
+SPIDER_UP = {1:2048, # Positions to Move first when torque is turned on, lifting legs into air
             2:2590,
             3:2048,
             4:1536,
@@ -128,7 +128,7 @@ SPIDER_UP = {1:2048,
             15:2048,
             16:1536}
 
-SPIDER_DOWN = {1:2048,
+SPIDER_DOWN = {1:2048, # Positions to move second after spider up, pushing robot off the ground
             2:2048,
             3:2048,
             4:2048,
