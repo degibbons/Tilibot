@@ -526,7 +526,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                     movementTime = (tspan*f_sw_per/phase_length)/60
                 else:
                     movementTime = (tspan*f_st_per/phase_length)/60
-                movementSpeed = (rotations / movementTime) / 0.114
+                movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 5 or each_servo == 6 or each_servo == 7 or each_servo == 8): 
                 if (stride_index==cLength):
@@ -537,7 +537,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                     movementTime = (tspan*f_sw_per/phase_length)/60
                 else:
                     movementTime = (tspan*f_st_per/phase_length)/60
-                movementSpeed = (rotations / movementTime) / 0.114
+                movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 9 or each_servo == 10 or each_servo == 11 or each_servo == 12 ):
                 if (stride_index==cLength):
@@ -548,7 +548,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                     movementTime = (tspan*h_sw_per/phase_length)/60
                 else:
                     movementTime = (tspan*h_st_per/phase_length)/60
-                movementSpeed = (rotations / movementTime) / 0.114
+                movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 13 or each_servo == 14 or each_servo == 15 or each_servo == 16 ):
                 if (stride_index==cLength):
@@ -559,7 +559,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                     movementTime = (tspan*h_sw_per/phase_length)/60
                 else:
                     movementTime = (tspan*h_st_per/phase_length)/60
-                movementSpeed = (rotations / movementTime) / 0.114
+                movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             else:
                 print("Program not set up to calculate speeds for spine yet. Exiting now.")
@@ -842,7 +842,6 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                 groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
                 groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packetHandler, AddrDict[39], 1)
                 ports_used[2] = 1
-    
         port_0_count = 0
         port_0_list = []
         port_1_count = 0
@@ -859,10 +858,8 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
             elif (ServosDictionary[each_servo].port_used == 2):
                 port_2_count += 1
                 port_2_list.append(each_servo)
-    
         GoalVelocity = []
         GoalPosition = []
-        
         out_data = []
         readers_exist = False
         for stride_count in range(stride_numbers[0]):
@@ -923,7 +920,6 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                     dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Velocity:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
-                        
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_1.clearParam()
                 if ports_used[1] == 1:
