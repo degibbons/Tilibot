@@ -85,7 +85,7 @@ DEVICENAMES = [DEVICENAME_1, DEVICENAME_2, DEVICENAME_3, DEVICENAME_4]
 
 FACTORYRST_DEFAULTBAUDRATE  = 57600                         # Dynamixel baudrate set by factoryreset
 NEW_BAUDNUM                 = 3                             # New baudnum to recover Dynamixel baudrate as it was
-
+DYNAMIXEL_SPEED_CONSTANT = 0.114                            # RPM i.e. a motor set to 300 speed is moving ccw direction at a rate of 34.33 rpm
 COMM_SUCCESS                = 0                             # Communication Success result value
 COMM_TX_FAIL                = -1001                         # Communication Tx Failed
 
