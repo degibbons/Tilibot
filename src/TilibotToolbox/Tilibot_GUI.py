@@ -249,7 +249,7 @@ class MainWindow(tk.Tk):
         color_indicator_Green = self.myCanvas.create_oval(400, 685, 420, 705, fill=self.servo_colors["green"])
         color_indicator_Purple = self.myCanvas.create_oval(400, 710, 420, 730, fill=self.servo_colors["purple"])
         # Create Legend Labels
-        color_indicator_Gray_text = self.myCanvas.create_text(483, 595,text="Robot Not Ready")
+        color_indicator_Gray_text = self.myCanvas.create_text(525, 595,text="Servos Not Detected and Marked")
         color_indicator_Red_text = self.myCanvas.create_text(497, 620,text="No Kinematics Loaded")
         color_indicator_Orange_text = self.myCanvas.create_text(534,645,text="Robot Ready - Not in Home Position")
         color_indicator_Yellow_text = self.myCanvas.create_text(523, 670, text="Robot Ready - In Home Position")
@@ -263,7 +263,7 @@ class MainWindow(tk.Tk):
         step_2_label = self.myCanvas.create_text(66,334,text='Step 2: Detect Servos')
         step_3_label = self.myCanvas.create_text(132,348,text='Step 3: Mark Moving and Non-Moving Servos')
         step_4_label = self.myCanvas.create_text(118,362,text='Step 4: Set Options for Amount of Servos')
-        step_5_label = self.myCanvas.create_text(97,376,text='Step 5: Set Options for Recording')
+        step_5_label = self.myCanvas.create_text(132,376,text='Step 5: Set Options for Recording (OPTIONAL)')
         step_6_label = self.myCanvas.create_text(103,390,text='Step 6: Set Stride Time and Amount')
         step_7_label = self.myCanvas.create_text(93,404,text='Step 7: Load the Kinematics File')
         step_8_label = self.myCanvas.create_text(72,418,text='Step 8: Select Get Ready')
@@ -272,7 +272,7 @@ class MainWindow(tk.Tk):
 
         # Create Port indicator lights and corresponding legend labels
         port_indicator_BoundingBox = self.myCanvas.create_rectangle(440,340, 530,440)
-        port_indicator_title = self.myCanvas.create_text(485,330, text="Port Status")
+        port_indicator_title = self.myCanvas.create_text(485,330, text="Port Status",font=("Helvetica",'10',"bold"))
         self.port_1_indicator = self.myCanvas.create_polygon(450,360, 460,350, 470,360, 460,370, 450,360,fill=self.servo_colors["red"],outline="#000000")
         self.port_2_indicator = self.myCanvas.create_polygon(450,390, 460,380, 470,390, 460,400, 450,390,fill=self.servo_colors["red"],outline="#000000")
         self.port_3_indicator = self.myCanvas.create_polygon(450,420, 460,410, 470,420, 460,430, 450,420,fill=self.servo_colors["red"],outline="#000000")
@@ -289,13 +289,12 @@ class MainWindow(tk.Tk):
         self.port_graphics = {1:self.port_1_indicator, # Create dictionary holding each port graphic for changing color later
                             2:self.port_2_indicator,
                             3:self.port_3_indicator}
-
+        
         # Create Stop Button for stopping execution in case of problem
         stop_button = tk.Button(master=self,text="Stop!",bg="red",width=20,height=40,command=self.set_stop_to_true)
         # Place stop button at bottom left of canvas
         stop_button_window = self.myCanvas.create_window(20,695,width=200,height=60,window=stop_button,anchor=tk.W)
         
-
         frame_1 = tk.Frame(master=self, padx=5, pady=5) # Create frame for title and global buttons
         prog_title = tk.Label(master=frame_1, text="Tilibot Visual - GUI ", relief=tk.FLAT, font=helv36) # Create title
         frame_1.grid(column=1, row=0, columnspan=4, rowspan=1, padx=5, pady=15) # Place frame on tkinter window
@@ -324,8 +323,6 @@ class MainWindow(tk.Tk):
         mark_to_stay_button.grid(row=5,padx=5,pady=5) # Place mark to stay button in frame
         reboot_reset_button.grid(column=0,row=6,padx=5,pady=5)
         
-
-
         frame_3 = tk.Frame(master=self) # Create frame to hold configuring options, buttons, and toggle indicators
         self.move_select = tk.IntVar() # Create tkinter variable to hold the choice of either moving one or multiple servos
         move_rb_one = ttk.Radiobutton(master=frame_3,text="Move One Servo",variable=self.move_select,value=0) # Create Radio Button for moving one servo
@@ -370,7 +367,7 @@ class MainWindow(tk.Tk):
         self.act_end_time.set("0.000") # Set the starting time to 0 second float
         self.stride_time_entry_string.trace('w',self.calculate_run_time) # Create a callback when the stride time entry string variable is changed
         self.stride_amount_entry_string.trace('w',self.calculate_run_time) # Create a callback when the stride amount entry string variable is changed
-        load_kinematics_file_button = ttk.Button(master=frame_4,text="Load Kinematics File",command=self.load_kinem_file) # Create the Load Kinematics file button for importing Kinematics Data for movement
+        load_kinematics_file_button = ttk.Button(master=frame_4,text="Load Kinematics File / Recalculate Speeds",command=self.load_kinem_file) # Create the Load Kinematics file button for importing Kinematics Data for movement
         load_kinematics_file_button.grid(row=4,column=0,columnspan=2,pady=10) # Place the load kinematics file button in frame
         indicator_label = ttk.Label(master=frame_4,text="Ready Indicator: ") # Create label for displaying the indicator light
         indicator_label.grid(column=0,row=5) # Put the label in the frame
@@ -386,8 +383,8 @@ class MainWindow(tk.Tk):
         run_button = ttk.Button(master=frame_5,text="Run",command = self.tilibot_run) # Create the Run button to run the robot through a trial
         reset_button = ttk.Button(master=frame_5,text="Reset",command = self.tilibot_reset) # Create the Reset button for reseting the robot between trials
         shutdown_button = ttk.Button(master=frame_5,text="Shutdown",command = self.tilibot_shutdown) # Create a button to Shut down the robot 
-        data_analysis_button = ttk.Button(master=frame_5,text="Analyse Data")
-        visualize_data_button = ttk.Button(master=frame_5,text="Visualize Data")
+        data_analysis_button = ttk.Button(master=frame_5,text="Analyse Data",command=self.analyse_data)
+        visualize_data_button = ttk.Button(master=frame_5,text="Visualize Data",command=self.visualize_data)
         frame_5.grid(column=2,row=3,columnspan=3,sticky=tk.N) # Place frame on tkinter window
         save_settings_button.grid(row=0,column=0,sticky=tk.W,padx=5,pady=5) # Place save settings button in frame
         load_settings_button.grid(row=1,column=0,sticky=tk.W+tk.E,padx=5,pady=5) # Place load settings button in frame
@@ -441,24 +438,24 @@ class MainWindow(tk.Tk):
         self.page_3_button = tk.Button(master=frame_12,text="2-Detect Servos",command= lambda b=3:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-2
         self.page_4_button = tk.Button(master=frame_12,text="3-Mark Servos",command=lambda b=4:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-3
         self.page_5_button = tk.Button(master=frame_12,text="4-Servo Options",command=lambda b=5:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-4
-        self.page_6_button = tk.Button(master=frame_12,text="5-Kinematics File",command=lambda b=6:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-5
-        self.page_7_button = tk.Button(master=frame_12,text="6-Recording Options",command=lambda b=7:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-6
-        self.page_8_button = tk.Button(master=frame_12,text="7-Stride Numbers",command=lambda b=8:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-7
+        self.page_6_button = tk.Button(master=frame_12,text="5-Recording Options",command=lambda b=6:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-5
+        self.page_7_button = tk.Button(master=frame_12,text="6-Stride Numbers",command=lambda b=7:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-6
+        self.page_8_button = tk.Button(master=frame_12,text="7-Kinematics File",command=lambda b=8:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-7
         self.page_9_button = tk.Button(master=frame_12,text="8-Get Ready",command=lambda b=9:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-8
         self.page_10_button = tk.Button(master=frame_12,text="9-Run",command=lambda b=10:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-9
         self.page_11_button = tk.Button(master=frame_12,text="10-Clean Up",command=lambda b=11:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-10
         self.page_12_button = tk.Button(master=frame_12,text="Other",command=lambda b=12:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying other relevant information
-        self.page_1_display = ttk.Label(master=self.hb_object_box,text="The Tilibot Visual Controller is used to guide the operation of the Tilibot Robot. Follow the steps presented for proper execution without issue. The order of exection is as follows:\n\n 1. Global Settings\n 2. Detect Servos\n 3. Mark Servos\n 4. Servo Options\n 5. Kinematics File\n 6. Recording Options\n 7. Stride Numbers\n 8. Get Ready\n 9. Run\n 10. Clean Up\n\n For further questions or inquiries, please contact danegibbons@gmail.com or text (631) 456-7733.")
+        self.page_1_display = ttk.Label(master=self.hb_object_box,text="The Tilibot Visual Controller is used to guide the operation of the Tilibot Robot. Follow the steps presented for proper execution without issue. The order of exection is as follows:\n\n 1. Global Settings\n 2. Detect Servos\n 3. Mark Servos\n 4. Servo Options\n 5. Recording Options\n 6. Stride Numbers\n 7. Kinematics File\n 8. Get Ready\n 9. Run\n 10. Clean Up\n\n For further questions or inquiries, please contact danegibbons@gmail.com or text (631) 456-7733.")
         self.page_2_display = ttk.Label(master=self.hb_object_box,text="The first step is to set your Global Settings.\n\n 1. Select the Global Settings box under the main title next to the Help Button.\n 2. Enter the Baud Rate (the speed at which the servos communicate)\n 3. and the Home Speed (the sped at which the robot will move to each home position).\n 4. Select Digital or Physical only, to indicate if the execution will happen only digitally or in physical space.\n 5. Then check off if the Body Sensors are connected or not.")
         self.page_3_display = ttk.Label(master=self.hb_object_box,text="The second step is to detect your servos.\n\n 1. Simply hit the Detect Servos button and the list should populate itself.\n\n The colors of the servos on the schematic should turn yellow, indicating that the servo was detected, but no option was selected yet.")
         self.page_4_display = ttk.Label(master=self.hb_object_box,text="The third step is to mark your servos.\n\n 1. Highlight the specific servos on the list using your cursor which should be moving and select 'Mark Seleced to Move'.\n 2. You will repeat the process once again, marking the servos which should NOT move and hitting the 'Mark Selected to Stay Straight' button.\n\n Typically servos 1-16 should be marked as moving, due to them being the limb servos, and 17-24 should be marked as staying straight, as they are the spine.")
         self.page_5_display = ttk.Label(master=self.hb_object_box,text="The fourth step is to set your servo options.\n\n 1. Select if one servo or multiple servos are moving by selecting the corresponding radio button to the right of the Detect Connected Servos button.\n 2. Then hit Configure Options to open up the servos options box.\n\n 2a. Enter the Number of Positions a servo should hit for each stride.\n 2b. Enter the Forelimb Stance and Swing ratios (These are the relative time proportions the stance and swing sections of a stride are measured as being)\n *After entering these numbers, a total will be calculated to the right.\n 2c. Enter the Forelimb Stance and Swing ratios\n *If the top calculated number is not equal to the bottom calculated number, the run will not operate, and the numbers will need to be fixed so they match.\n 2d. Hit Apply")
-        self.page_6_display = ttk.Label(master=self.hb_object_box,text="The fifth step is to load the Kinematics File.\n\n 1. Simply hit the 'Load Kinematics File' button. The selected file should be a .csv and should include servos 1-16 (or the servos that should move)")
-        self.page_7_display = ttk.Label(master=self.hb_object_box,text="The sixth step is to set your recording options.\n\n 1. Check off if you will be recording data or not\n 2. Then hit the 'Configure Options' button.\n\n 2a. Hit the 'Select Target Directory' button. Select the directory location in which you want the data being exported to end up.\n 2b. Enter the name of the file to be exported.\n 2c. Select which options you'd like to record,as detailed below\n 2d. Hit Apply\n\n Position: The Servo Position in Dynamixel units\n Speed: The Servo Speed in Dynamixel Units\n Time: The time at which the servo stops moving per movement.\n Position Index: Which position out of the amount of positions indicated in Step 4\n Stride Count: Which stride each movement takes place in as indicated in Step 7\n Current: The Current at the end of each servo movement\n Voltage: The Voltage at the end of each servo movement\n Temperature: The Temperature at the end of each servo movement.")
-        self.page_8_display = ttk.Label(master=self.hb_object_box,text="The seventh step is to set the stride time and amount\n\n 1. Enter the Stride Time (The amount of time in seconds it is desired one stride should take)\n 2. Enter the Stride Amount (The amount of strides the robot should attempt to make before being considered finished).")
+        self.page_6_display = ttk.Label(master=self.hb_object_box,text="The fifth step is to set your recording options.\n\n 1. Check off if you will be recording data or not\n 2. Then hit the 'Configure Options' button.\n\n 2a. Hit the 'Select Target Directory' button. Select the directory location in which you want the data being exported to end up.\n 2b. Enter the name of the file to be exported.\n 2c. Select which options you'd like to record,as detailed below\n 2d. Hit Apply\n\n Position: The Servo Position in Dynamixel units\n Speed: The Servo Speed in Dynamixel Units\n Time: The time at which the servo stops moving per movement.\n Position Index: Which position out of the amount of positions indicated in Step 4\n Stride Count: Which stride each movement takes place in as indicated in Step 7\n Current: The Current at the end of each servo movement\n Voltage: The Voltage at the end of each servo movement\n Temperature: The Temperature at the end of each servo movement.")
+        self.page_7_display = ttk.Label(master=self.hb_object_box,text="The sixth step is to set the stride time and amount\n\n 1. Enter the Stride Time (The amount of time in seconds it is desired one stride should take)\n 2. Enter the Stride Amount (The amount of strides the robot should attempt to make before being considered finished).")
+        self.page_8_display = ttk.Label(master=self.hb_object_box,text="The seventh step is to load the Kinematics File.\n\n 1. Simply hit the 'Load Kinematics File' button. The selected file should be a .csv and should include servos 1-16 (or the servos that should move).\n\nNOTE: If you reset the robot to run again, then change the stride time and/or stride amount, hit the Kinematics File button to recalculate the speeds. It will not ask you to select another file to import.")
         self.page_9_display = ttk.Label(master=self.hb_object_box,text="The eighth step is to hit the 'Get Ready' Button.\n\n After hitting the button, the robot should rise its legs up in the air, then place them down, putting all servos at 90 degrees and suspending the robot in a basic standing position. It should then move its limbs to the official 'Home Position', in which its limbs are in the actual first position of a stride, as dictated by the kinematics file.")
         self.page_10_display = ttk.Label(master=self.hb_object_box,text="The ninth step is to hit the 'Run' Button.\n\n The robot should now run, using all the previous details to run according to the expected configurations. Once the desired amount of strides is complete, the robot will stop moving, remaining still but with the servos still activated.")
-        self.page_11_display = ttk.Label(master=self.hb_object_box,text="The tenth step is to select either the 'Reset' Button to reset the robot for another run, or the 'Shutdown' Button to shutdown and finish using Tilibot.\n\n Reseting the robot will change the indicator light to red, indicating that the robot is ready to run again, but is not in the designated Home Position. The torque for each servo should be turned off and the robot will fall to the floor.\n\n At this point you may repeat steps 8,9, and 10 to continue running Tilibot through trials. If recording data, please be sure to rename your file from Step 6 between runs so as to not cause an issue.\n\n When finished, please select 'Shutdown'.")
+        self.page_11_display = ttk.Label(master=self.hb_object_box,text="The tenth step is to select either the 'Reset' Button to reset the robot for another run, or the 'Shutdown' Button to shutdown and finish using Tilibot.\n\n Reseting the robot will change the indicator light to orange, indicating that the robot is ready to run again, but is not in the designated Home Position. The torque for each servo should be turned off and the robot will fall to the floor.\n\n At this point you may repeat steps 8,9, and 10 to continue running Tilibot through trials. If recording data, please be sure to rename your file from Step 6 between runs so as to not cause an issue.\n\n When finished, please select 'Shutdown'.")
         self.page_12_display = ttk.Label(master=self.hb_object_box,text="When repeatedly using the Tilibot GUI, certain settings will be used over and over. Use the 'Save Current Settings' button to create a .yml file to save all the settings currently applied. When running in the future, you may use the 'Load Settings File' button to reapply all fields from the previous steps.\n\n *Note: The servos will still have to be detected and marked after loading a settings file.\n\n\n If at any point in time you have an issue with running and need to terminate the trial, press the Red 'Stop!' button at the bottom of the schematic.")
         frame_12.grid(row=0,column=0,pady=10,padx=5) # Place the frame with page buttons in the tkinter window
         self.page_1_button.grid(row=0,column=0,pady=3,padx=3,sticky=tk.E+tk.W) # Place the button in the frame
@@ -797,10 +794,10 @@ class MainWindow(tk.Tk):
         reset_description_label = ttk.Label(master=frame_14,text = "Factory Resets all servo trait values to default values. Options to keep one or two values are also available.")
         reset_description_label.config(wraplength = 250) # Set the wraplength so the text fits within the box
         reboot_button = ttk.Button(master=frame_13,text="Reboot",command=self.RebootServo)
-        reset_radio_button_1 = ttk.Radiobutton(master=frame_14,text="1 - reset all values (ID to 1, baudrate to 57600)",variable=self.reset_mode,value=0)
-        reset_radio_button_2 = ttk.Radiobutton(master=frame_14,text="2 - reset all values except ID (baudrate to 57600)",variable=self.reset_mode,value=1)
-        reset_radio_button_3 = ttk.Radiobutton(master=frame_14,text="3 - reset all values except ID and baudrate.",variable=self.reset_mode,value=2)
-        self.reset_mode.set(0)
+        reset_radio_button_1 = ttk.Radiobutton(master=frame_14,text="1 - reset all values (ID to 1, baudrate to 57600)",variable=self.reset_mode,value=1)
+        reset_radio_button_2 = ttk.Radiobutton(master=frame_14,text="2 - reset all values except ID (baudrate to 57600)",variable=self.reset_mode,value=2)
+        reset_radio_button_3 = ttk.Radiobutton(master=frame_14,text="3 - reset all values except ID and baudrate.",variable=self.reset_mode,value=3)
+        self.reset_mode.set(3)
         reset_button = ttk.Button(master=frame_14,text="Reset",command=lambda b=self.reset_mode:self.ResetServo(b))
         self.reboot_ind_canvas = tk.Canvas(master=frame_13,width=30,height=30) # Create small canvas to place indicator light
         self.reb_indic_oval = self.reboot_ind_canvas.create_oval(10, 10, 30, 30)  # Create a circle on the Canvas
@@ -812,7 +809,7 @@ class MainWindow(tk.Tk):
         rr_close_button = ttk.Button(master=frame_15,text="Close",command=self.close_reboot_reset_box) # Create close button to destroy/close save settings box
         frame_13.grid(row=0,column=0)
         separate_1.grid(row=0,column=1,sticky=tk.N+tk.S)
-        frame_14.grid(row=0,column=2)
+        frame_14.grid(row=0,column=2)   
         frame_15.grid(row=1,column=0,columnspan=3)
         reboot_section_label.grid(row=0,column=0,sticky=tk.W+tk.E+tk.N,padx=5,pady=5)
         reboot_description_label.grid(row=1,column=0,sticky=tk.W+tk.E,padx=5,pady=5)
@@ -1040,7 +1037,7 @@ class MainWindow(tk.Tk):
                 time.sleep(2)
                 for each_servo in self.confirmed_action[1]:
                     self.ServosDictionary[each_servo].MoveHome(config_array[17],self.port_servo_dict[each_servo]) # Send servos to actual starting position (first position in stride)
-            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["yellow"]) # Change 
+            self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["yellow"]) # Change indicator light to show status
             Step_Progressor = 6
             
     def tilibot_run(self): # Function to run the robot through one trial
@@ -1167,6 +1164,17 @@ class MainWindow(tk.Tk):
             self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["orange"])
             Step_Progressor = 5
 
+
+    def analyse_data(self):
+        # in_csv_data = fdlg.askopenfilename()
+        messagebox.showerror(title="Sorry!",message="Terribly sorry, this feature isn't functionally implemented yet!")
+
+
+    def visualize_data(self):
+        # in_analyzed_data = fdlg.askopenfilename()
+        
+        messagebox.showerror(title="Sorry!",message="Terribly sorry, this feature isn't functionally implemented yet!")
+
     def RebootServo(self): # Function to Reboot the servos when required
         self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["yellow"])
         reboot_list = []
@@ -1235,11 +1243,12 @@ class MainWindow(tk.Tk):
         #0xFF : reset all values (ID to 1, baudrate to 57600)
         #0x01 : reset all values except ID (baudrate to 57600)
         #0x02 : reset all values except ID and baudrate.
-        if reset_value == 1:
+        print(reset_value)
+        if reset_value.get() == 1:
             OPERATION_MODE = 0xFF
-        elif reset_value == 2:
+        elif reset_value.get() == 2:
             OPERATION_MODE = 0x01
-        elif reset_value == 3:
+        elif reset_value.get() == 3:
             OPERATION_MODE = 0x02
         else:
             print("Reset value not recognized. Please fix and try again.")
