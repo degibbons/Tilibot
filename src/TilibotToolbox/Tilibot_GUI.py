@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import filedialog as fdlg
 from tkinter import messagebox
 import tkinter.font as tkFont
+from PIL import ImageTk,Image 
 import time
 from Tilibot_Constants import *
 from Tilibot_Functions import *
@@ -14,6 +15,8 @@ from Tilibot_Classes import *
 from Tilibot_Universal_Functions import *
 from dynamixel_sdk import *
 import sys
+import os
+
 
 GUI_or_TERMINAL = -1 # -1 for GUI, +1 for Terminal
 Step_Progressor = 0
@@ -297,12 +300,19 @@ class MainWindow(tk.Tk):
         
         frame_1 = tk.Frame(master=self, padx=5, pady=5) # Create frame for title and global buttons
         prog_title = tk.Label(master=frame_1, text="Tilibot Visual - GUI ", relief=tk.FLAT, font=helv36) # Create title
-        frame_1.grid(column=1, row=0, columnspan=4, rowspan=1, padx=5, pady=15) # Place frame on tkinter window
-        prog_title.grid(row=0,column=0,columnspan=4, sticky=tk.N+tk.W+tk.E) # Place title in frame 
+        frame_1.grid(column=2, row=0, columnspan=4, rowspan=1, padx=5, pady=15) # Place frame on tkinter window
+        prog_title.grid(row=0,column=0,columnspan=3, sticky=tk.N+tk.W+tk.E) # Place title in frame 
         help_button = ttk.Button(master=frame_1, text="Help",command=self.open_help_box) # Create Help Button
+        self.logo_canvas = tk.Canvas(master=frame_1,height=75, width=75) # Create the canvas to display the logo on
+        self.photoimage = ImageTk.PhotoImage(file="Tilibot_mini_S.png")
+        # img = ImageTk.PhotoImage(file=os.getcwd()+'\Tilibot_mini.png')
+        self.logo_canvas.create_image(35,35,image=self.photoimage) 
         help_button.grid(column=0,row=1,pady=10,sticky=tk.W) # Place help button in frame
         global_settings_button = ttk.Button(master=frame_1, text="Global Settings",command=self.open_global_settings_box) # Create Global Settings Button
-        global_settings_button.grid(column=3,row=1,pady=10,sticky=tk.E) # Place global settings button in frame
+        global_settings_button.grid(column=2,row=1,pady=10,sticky=tk.E) # Place global settings button in frame
+        self.logo_canvas.grid(row=0,column=5,rowspan=2,padx=10)
+        
+        
 
         frame_2 = tk.Frame(master=self) # Create Frame for servo detection tools
         detect_servos_button = ttk.Button(master=frame_2, text="Detect Connected Servos",command=self.detect_servos) # Create button for pinging servos to detect them and to populate the list
@@ -446,7 +456,7 @@ class MainWindow(tk.Tk):
         self.page_11_button = tk.Button(master=frame_12,text="10-Clean Up",command=lambda b=11:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying step-10
         self.page_12_button = tk.Button(master=frame_12,text="Other",command=lambda b=12:self.show_hide_page(b),bg='#e0e0e0') # Create a button for displaying other relevant information
         self.page_1_display = ttk.Label(master=self.hb_object_box,text="The Tilibot Visual Controller is used to guide the operation of the Tilibot Robot. Follow the steps presented for proper execution without issue. The order of exection is as follows:\n\n 1. Global Settings\n 2. Detect Servos\n 3. Mark Servos\n 4. Servo Options\n 5. Recording Options\n 6. Stride Numbers\n 7. Kinematics File\n 8. Get Ready\n 9. Run\n 10. Clean Up\n\n For further questions or inquiries, please contact danegibbons@gmail.com or text (631) 456-7733.")
-        self.page_2_display = ttk.Label(master=self.hb_object_box,text="The first step is to set your Global Settings.\n\n 1. Select the Global Settings box under the main title next to the Help Button.\n 2. Enter the Baud Rate (the speed at which the servos communicate)\n 3. and the Home Speed (the sped at which the robot will move to each home position).\n 4. Select Digital or Physical only, to indicate if the execution will happen only digitally or in physical space.\n 5. Then check off if the Body Sensors are connected or not.")
+        self.page_2_display = ttk.Label(master=self.hb_object_box,text="The first step is to set your Global Settings.\n\n 1. Select the Global Settings box under the main title next to the Help Button.\n 2. Enter the Baud Rate (the speed at which the servos communicate)\n 3. and the Home Speed (the sped at which the robot will move to each home position).\n 4. Select Digital or Physical only, to indicate if the execution will happen only digitally or in physical space.\n 5. Then check off if the Body Sensors are connected or not.\n\nAlternatively, you could press the Load Settings button to load a pre-filled out YAML file. This will fill all input boxes, checkboxes, and radio buttons to specified parameters. The Multiple Servos options will still need to be checked and the Apply button will need to be hit. Servos will still need to be detected and marked as well.")
         self.page_3_display = ttk.Label(master=self.hb_object_box,text="The second step is to detect your servos.\n\n 1. Simply hit the Detect Servos button and the list should populate itself.\n\n The colors of the servos on the schematic should turn yellow, indicating that the servo was detected, but no option was selected yet.")
         self.page_4_display = ttk.Label(master=self.hb_object_box,text="The third step is to mark your servos.\n\n 1. Highlight the specific servos on the list using your cursor which should be moving and select 'Mark Seleced to Move'.\n 2. You will repeat the process once again, marking the servos which should NOT move and hitting the 'Mark Selected to Stay Straight' button.\n\n Typically servos 1-16 should be marked as moving, due to them being the limb servos, and 17-24 should be marked as staying straight, as they are the spine.")
         self.page_5_display = ttk.Label(master=self.hb_object_box,text="The fourth step is to set your servo options.\n\n 1. Select if one servo or multiple servos are moving by selecting the corresponding radio button to the right of the Detect Connected Servos button.\n 2. Then hit Configure Options to open up the servos options box.\n\n 2a. Enter the Number of Positions a servo should hit for each stride.\n 2b. Enter the Forelimb Stance and Swing ratios (These are the relative time proportions the stance and swing sections of a stride are measured as being)\n *After entering these numbers, a total will be calculated to the right.\n 2c. Enter the Forelimb Stance and Swing ratios\n *If the top calculated number is not equal to the bottom calculated number, the run will not operate, and the numbers will need to be fixed so they match.\n 2d. Hit Apply")
@@ -499,7 +509,7 @@ class MainWindow(tk.Tk):
     def open_global_settings_box(self): # Function to open the global settings box and populate it with the proper widgets
         self.run_condition = tk.IntVar() # Create variable to house the run condition setting
         self.gs_object_box = tk.Toplevel(self) # Create a new window for the global settings box object
-        self.gs_object_box.geometry("275x200") # Set the geometry for the new window
+        self.gs_object_box.geometry("295x200") # Set the geometry for the new window
         self.gs_object_box.title("Global Settings") # Set the title for the new window
         self.baud_rate_entry_string = tk.StringVar() # Create string variable to store the baud rate value input
         self.home_speed_entry_string = tk.StringVar() # Create string variable to store home speed value input
