@@ -815,7 +815,16 @@ def StraightenSpine(ServosDictionary,port_hand_list,packetHandler,DigitalOnly):
             groupSyncWritePOS_3.clearParam()
     return 0
 
-def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time,DigitalOnly):
+def DetermineProfileAccceleration(profileVelocity,changeInPosition,endMoveTime):
+    print("Profile Velocity: " + str(profileVelocity))
+    print("Change in Position: " + str(changeInPosition))
+    print("End Move Time: " + str(endMoveTime))
+    prof_acc = int(((64 * profileVelocity) / endMoveTime - ((64 * changeInPosition) / profileVelocity)).round())
+    print("Profile Acceleration: " + str(prof_acc))
+    print("===============================")
+    return prof_acc
+
+def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time, DigitalOnly):
     if DigitalOnly == True:
         pass
     elif DigitalOnly == False:
@@ -827,6 +836,8 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
                 groupSyncRead_Moving_1 = GroupSyncRead(port_hand_list[0],packetHandler, AddrDict[39], 1)
+                groupSyncWriteProfileAcc_1 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[35], 4)
+                groupSyncWriteProfileVel_1 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[36], 4)
                 ports_used[0] = 1
             if any(port_servo_dict[x] == port_hand_list[1] for x in servo_list):
                  # Initialize GroupSyncWrite instance
@@ -834,6 +845,8 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
                 groupSyncRead_Moving_2 = GroupSyncRead(port_hand_list[1],packetHandler, AddrDict[39], 1)
+                groupSyncWriteProfileAcc_2 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[35], 4)
+                groupSyncWriteProfileVel_2 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[36], 4)
                 ports_used[1] = 1
             if any(port_servo_dict[x] == port_hand_list[2] for x in servo_list):
                 # Initialize GroupSyncWrite instance
@@ -841,6 +854,8 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_3 = GroupSyncWrite(port_hand_list[2], packetHandler, AddrDict[36], 4)
                 groupSyncRead_Moving_3 = GroupSyncRead(port_hand_list[2],packetHandler, AddrDict[39], 1)
+                groupSyncWriteProfileAcc_3 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[35], 4)
+                groupSyncWriteProfileVel_3 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[36], 4)
                 ports_used[2] = 1
         port_0_count = 0
         port_0_list = []
@@ -895,6 +910,20 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        # # Determine position difference for use in determining profile acceleration
+                        # if (position_index != 0):
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
+                        # else:
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[-1])
+                        # dxl_addparam_result = groupSyncWriteProfileAcc_1.addParam(each_servo,FormatSendData(DetermineProfileAccceleration(int(ServosDictionary[each_servo].Speeds[speed_index]),pos_difference,stride_numbers[2]/stride_numbers[1])))  # Possibly needs to be in Velocity Format
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile acceleration failed" % each_servo)
+                        #     return
+                        # dxl_addparam_result = groupSyncWriteProfileVel_1.addParam(each_servo,GoalVelocity[index]) # Possibly needs to be just number
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile velocity failed" % each_servo)
+                        #     return
+
                     elif each_servo in port_1_list:
                         dxl_addparam_result = groupSyncWriteVEL_2.addParam(each_servo,GoalVelocity[index])
                         if dxl_addparam_result != True:
@@ -904,6 +933,20 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        # # Determine position difference for use in determining profile acceleration
+                        # if (position_index != 0):
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
+                        # else:
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[-1])
+                        # dxl_addparam_result = groupSyncWriteProfileAcc_2.addParam(each_servo,FormatSendData(DetermineProfileAccceleration(int(ServosDictionary[each_servo].Speeds[speed_index]),pos_difference,stride_numbers[2]/stride_numbers[1])))  # Possibly needs to be in Velocity Format
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile acceleration failed" % each_servo)
+                        #     return
+                        # dxl_addparam_result = groupSyncWriteProfileVel_2.addParam(each_servo,GoalVelocity[index]) # Possibly needs to be just number
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile velocity failed" % each_servo)
+                        #     return
+
                     elif each_servo in port_2_list:
                         dxl_addparam_result = groupSyncWriteVEL_3.addParam(each_servo,GoalVelocity[index])
                         if dxl_addparam_result != True:
@@ -913,29 +956,76 @@ def MoveNumerousServos(servo_list, ServosDictionary, port_hand_list, port_servo_
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        # # Determine position difference for use in determining profile acceleration
+                        # if (position_index != 0):
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
+                        # else:
+                        #     pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[-1])
+                        # dxl_addparam_result = groupSyncWriteProfileAcc_3.addParam(each_servo,FormatSendData(DetermineProfileAccceleration(int(ServosDictionary[each_servo].Speeds[speed_index]),pos_difference,stride_numbers[2]/stride_numbers[1])))  # Possibly needs to be in Velocity Format
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile acceleration failed" % each_servo)
+                        #     return
+                        # dxl_addparam_result = groupSyncWriteProfileVel_3.addParam(each_servo,GoalVelocity[index]) # Possibly needs to be just number
+                        # if dxl_addparam_result != True:
+                        #     print("[ID:%03d] groupSyncWrite addparam profile velocity failed" % each_servo)
+                        #     return
+
                     else:
                         print('Error in servo list. Please fix and try again.')
                 if ports_used[0] == 1:
-                    # Syncwrite goal velocity
+                #     # Syncwrite Velocity and Acceleration profiles for trapezoidal Velocity Profile
+                #     dxl_comm_result = groupSyncWriteProfileAcc_1.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Acceleration Profile:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     dxl_comm_result = groupSyncWriteProfileVel_1.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Velocity Profile:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     groupSyncWriteProfileAcc_1.clearParam()
+                #     groupSyncWriteProfileVel_1.clearParam()
+
+                #     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Velocity:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_1.clearParam()
+
                 if ports_used[1] == 1:
-                    # Syncwrite goal velocity
+                #     # Syncwrite Velocity and Acceleration profiles for trapezoidal Velocity Profile
+                #     dxl_comm_result = groupSyncWriteProfileAcc_2.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Acceleration Profile:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     dxl_comm_result = groupSyncWriteProfileVel_2.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Velocity Profile:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     groupSyncWriteProfileAcc_2.clearParam()
+                #     groupSyncWriteProfileVel_2.clearParam()
+
+                #     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_2.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Velocity:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_2.clearParam()
+
                 if ports_used[2] == 1:
+                #     # Syncwrite Velocity and Acceleration profiles for trapezoidal Velocity Profile
+                #     dxl_comm_result = groupSyncWriteProfileAcc_3.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Acceleration Profile:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     dxl_comm_result = groupSyncWriteProfileVel_3.txPacket()
+                #     if dxl_comm_result != COMM_SUCCESS:
+                #         print("%s - Velocity Profile:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+                #     groupSyncWriteProfileAcc_3.clearParam()
+                #     groupSyncWriteProfileVel_3.clearParam()
+
                     # Syncwrite goal velocity
                     dxl_comm_result = groupSyncWriteVEL_3.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Velocity:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_3.clearParam()
+                    
                 if ports_used[0] == 1:
                     # Syncwrite goal position
                     dxl_comm_result = groupSyncWritePOS_1.txPacket()
