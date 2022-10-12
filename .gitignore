@@ -1,0 +1,15 @@
+*.*~
+*.swp
+*.swo
+Tilibot_Notes.txt
+Tilibot_Log.txt
+*.vim
+__init__.py
+Unfinished/
+NonEssentialCode/
+__pycache__
+Tilibot_Workspace_Npp
+hard_error_test.py
+.vscode/
+Tilibot\ Time\ Trials.gsheet
+*.bak
