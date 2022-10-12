@@ -13,3 +13,17 @@ hard_error_test.py
 .vscode/
 Tilibot\ Time\ Trials.gsheet
 *.bak
+desktop.ini
+DynamixelSDK-3.7.31/  
+dynamixel_sdk/
+ErrorBinaries.txt
+Instructions_DisplayGUI_overSSH.txt
+LayoutFile.drawio
+LayoutFile.png
+SSH_instructions.txt
+Tilibot_instructions.txt
+pyproject.toml
+requirements.txt
+requirements_2.txt
+setup.py
+tests/
