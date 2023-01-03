@@ -1,4 +1,4 @@
-## Tilibot Functions
+## Tilibot Functions_noThres
 
 from Tilibot_Constants import *
 from Tilibot_Classes import Servo, Leg, Neck, Spine, Tail, Body
@@ -13,6 +13,8 @@ import time
 import sys
 import csv
 import math
+
+tryMeSwitch = False
 
 if os.name == 'nt': # nt for windows, posix for mac and linux, Defines getch for user control, makes hitting enter to continue possible
     import msvcrt   
@@ -103,7 +105,7 @@ def check_config_file(config_array,GUI_or_TERMINAL):
         valid_home_speed = False # Change the value of the check variable if this is not the case
     elif (config_array[17] > 1023) or (config_array[17] < 0): # Check if the value of the variable is within the Dynamixel-established Speed Range
         valid_home_speed = False # Change the value of the check variable if this is not the case
-    
+
     if (not isinstance(config_array[0],int)) or (config_array[0] <= 0): # Check if baud rate is integer and less than or equal to 0
         print("Baud-Rate input is incorrect format. Please fix and try again.")
         invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
@@ -231,7 +233,7 @@ def check_config_file(config_array,GUI_or_TERMINAL):
 
 def RecordPreferences(config_array): # Check if any of the record fields are set to True for recording purposes
     record_fields = [config_array[20], config_array[21], config_array[22], config_array[23], config_array[24],
-                    config_array[25], config_array[26], config_array[27]]
+            config_array[25], config_array[26], config_array[27]]
     record_yesno = None
     if any(record_fields):
         record_yesno = True
@@ -480,8 +482,8 @@ def ReadServoAngles(positionsFile):
     HL_TOT_L_4 = list(map(int,HL_TOT_L_4))
 
     return [FL_TOT_R_1, FL_TOT_R_2, FL_TOT_R_3, FL_TOT_R_4, FL_TOT_L_1, 
-    FL_TOT_L_2, FL_TOT_L_3, FL_TOT_L_4, HL_TOT_R_1, HL_TOT_R_2, HL_TOT_R_3, 
-    HL_TOT_R_4, HL_TOT_L_1, HL_TOT_L_2, HL_TOT_L_3, HL_TOT_L_4]
+            FL_TOT_L_2, FL_TOT_L_3, FL_TOT_L_4, HL_TOT_R_1, HL_TOT_R_2, HL_TOT_R_3, 
+            HL_TOT_R_4, HL_TOT_L_1, HL_TOT_L_2, HL_TOT_L_3, HL_TOT_L_4]
 
 def PostProcessPositions(inPositions):
     ServoPos1 = RotatePositionArray(inPositions[0],1,len(inPositions[0]))
@@ -526,9 +528,21 @@ def PostProcessPositions(inPositions):
     ServoPos16 = np.array(ServoPos16)
 
     return [ServoPos1, ServoPos2, ServoPos3, ServoPos4, 
-    ServoPos5, ServoPos6, ServoPos7, ServoPos8, 
-    ServoPos9, ServoPos10, ServoPos11, ServoPos12, 
-    ServoPos13, ServoPos14, ServoPos15, ServoPos16]
+            ServoPos5, ServoPos6, ServoPos7, ServoPos8, 
+            ServoPos9, ServoPos10, ServoPos11, ServoPos12, 
+            ServoPos13, ServoPos14, ServoPos15, ServoPos16]
+
+def ScaleSpeedValue(scalingDiff, oldValue):
+# Scaling adjustment to avoid speeds that are too slow
+    maxSpeed = 1023
+    minSpeed = 1
+    oldRange = maxSpeed - minSpeed
+    # scalingDiff = 4
+    newUpperLimit = maxSpeed - scalingDiff
+    newLowerLimit = minSpeed + scalingDiff
+    newRange = newUpperLimit - newLowerLimit
+    adjustedSpeedVal = (((oldValue - minSpeed) * newRange) / oldRange) + newLowerLimit
+    return adjustedSpeedVal
 
 def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
     #Make a copy of the dataframe with the same dimensions for the speeds
@@ -537,7 +551,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
     h_swing = config_array[11]
     f_stance = config_array[8]
     f_swing = config_array[9]
-    print("determine speeds - " + str(config_array[12]))
+    print("\nDetermining speeds using ratio numbers.\n")
     h_st_per = h_stance / config_array[12]
     h_sw_per = h_swing / config_array[12]
     f_st_per = f_stance / config_array[12]
@@ -562,8 +576,9 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
     for i in np.linspace(1,cWidth,cWidth):
         newSpeeds.append(np.zeros(cLength))
     for each_servo in servos:
-        for stride_index in MoveIndex: #0.114 rpm given by https://emanual.robotis.com/docs/en/dxl/mx/mx-64/
-            if (each_servo == 1 or each_servo == 2 or each_servo == 3 or each_servo == 4 ):
+        for stride_index in MoveIndex: # 0.229rpm  given by https://emanual.robotis.com/docs/en/dxl/mx/mx-64-2/
+                                       # 0~1,023 value range for speeds
+            if (each_servo == 1 or each_servo == 2 or each_servo == 3 or each_servo == 4):
                 if (stride_index==cLength):
                     rotations = abs(speeds[each_servo-1][0]-speeds[each_servo-1][stride_index-1])/4096
                 else:
@@ -573,6 +588,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                 else:
                     movementTime = (tspan*f_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
+                movementSpeed = ScaleSpeedValue(SCALING_DIFFERENCE, movementSpeed)
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 5 or each_servo == 6 or each_servo == 7 or each_servo == 8): 
                 if (stride_index==cLength):
@@ -584,6 +600,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                 else:
                     movementTime = (tspan*f_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
+                movementSpeed = ScaleSpeedValue(SCALING_DIFFERENCE, movementSpeed)
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 9 or each_servo == 10 or each_servo == 11 or each_servo == 12 ):
                 if (stride_index==cLength):
@@ -595,6 +612,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                 else:
                     movementTime = (tspan*h_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
+                movementSpeed = ScaleSpeedValue(SCALING_DIFFERENCE, movementSpeed)
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             elif (each_servo == 13 or each_servo == 14 or each_servo == 15 or each_servo == 16 ):
                 if (stride_index==cLength):
@@ -606,6 +624,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
                 else:
                     movementTime = (tspan*h_st_per/phase_length)/60
                 movementSpeed = (rotations / movementTime) / DYNAMIXEL_SPEED_CONSTANT
+                movementSpeed = ScaleSpeedValue(SCALING_DIFFERENCE, movementSpeed)
                 newSpeeds[each_servo-1][stride_index-1] = round(movementSpeed)
             else:
                 print("Program not set up to calculate speeds for spine yet. Exiting now.")
@@ -616,7 +635,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
         newSpeeds[each_servo-1][newSpeeds[each_servo-1] > 1023] = 1023 # For Joint Mode/Multi-turn Mode, 0-1023 is the range for speeds
         newSpeeds[each_servo-1][newSpeeds[each_servo-1] == 0] = 1 # 0 sets the speed to the fastest possible, NOT the slowest
     return newSpeeds
-    
+
 def Create_DigitalServos(config_array,port_used_dict,PositionsMatrix,SpeedMatrix):
     ServoDictionary = {}
     DigitalOnly = config_array[32]
@@ -891,7 +910,7 @@ def StraightenSpine(ServosDictionary,port_hand_list,packetHandler,DigitalOnly):
             elif (each_servo in ServosDictionary) and (each_servo not in port_0_list) and (each_servo not in port_1_list) and (each_servo not in port_2_list):
                 print("Servo #%03d not included in stay straight protocol" % each_servo)
             else:
-                print('Error in servo list. Please fix and try again.')
+                print('[ID:%03d]: Error in servo list - Straighten Spine. Please fix and try again.' % each_servo)
 
         if ports_used[0] == 1:
             # Syncwrite goal velocity
@@ -1001,14 +1020,26 @@ def DetermineProfileAccceleration(profileVelocity,changeInPosition,endMoveTime):
     print("===============================")
     return prof_acc
 
+# Removable Testing
+def createDataMat(inMat,inServ,inNum,inPos):
+    inMat[inPos][inServ] = inNum
+    return inMat
+
 def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time, move_smooth, DigitalOnly):
     if DigitalOnly == True:
         pass
     elif DigitalOnly == False:
         ports_used = [0, 0, 0, 0, 0, 0]
+
+        print('Servo list: {0}\n'.format(servo_list))
+        # print('Servo Dictionary: {0}'.format(ServosDictionary))
+        print('Stride Numbers -> Stride Amount: {0}, Number of Moves: {1}, Time in seconds per stride: {2}\n'.format(stride_numbers[0],stride_numbers[1],stride_numbers[2]))
+        
+        timePerMove = stride_numbers[2]/stride_numbers[1]
+
         for x in servo_list:
             if any(port_servo_dict[x] == port_hand_list[0] for x in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
@@ -1020,7 +1051,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     groupSyncWriteProfileVel_1 = GroupSyncWrite(port_hand_list[0],packetHandler, AddrDict[36], 4)
                 ports_used[0] = 1
             if any(port_servo_dict[x] == port_hand_list[1] for x in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
@@ -1044,7 +1075,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     groupSyncWriteProfileVel_3 = GroupSyncWrite(port_hand_list[2],packetHandler, AddrDict[36], 4)
                 ports_used[2] = 1
             if any(port_servo_dict[x] == port_hand_list[3] for x in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[36], 4)
@@ -1056,7 +1087,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     groupSyncWriteProfileVel_4 = GroupSyncWrite(port_hand_list[3],packetHandler, AddrDict[36], 4)
                 ports_used[3] = 1
             if any(port_servo_dict[x] == port_hand_list[4] for x in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[36], 4)
@@ -1110,13 +1141,28 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
             elif (ServosDictionary[each_servo].port_used == 5):
                 port_5_count += 1
                 port_5_list.append(each_servo)
-        GoalVelocity = []
-        GoalPosition = []
-        Original_GoalPosition = []
+            
+            print("[ID:{0}] - Velocities: {1}".format(each_servo,ServosDictionary[each_servo].Speeds))
+            print("[ID:{0}] - Positions: {1}".format(each_servo,ServosDictionary[each_servo].Positions))
+            print("----------------------------------------------------")
+        
         out_data = []
         readers_exist = False
+
+        # Removable Testing
+        # analyseMe = [[0]*16]*stride_numbers[1]
+        analyseMe = [[0 for i in range(16)] for j in range(stride_numbers[1])]
+        # actualNums = [[0]*16]*stride_numbers[1]
+        actualNums = [[0 for i in range(16)] for j in range(stride_numbers[1])]
+        
+
+        ###### Entering Movement Loop Below ######
         for stride_count in range(stride_numbers[0]):
             for position_index in range(stride_numbers[1]):
+
+                timeDiff_1 = time.time() - start_time
+                print('Time Start: {0}'.format(timeDiff_1))
+
                 if (stride_count == 0) and (position_index == 0): # Skip the first position, this is Home Position
                     continue
                 if (stride_count != 0) and (position_index == 0):
@@ -1124,55 +1170,83 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                 else:
                     speed_index = position_index - 1
                 if ports_used[0] == 1:
-                    isStopped_0 = [0] * port_0_count
-                    isInThreshold_0 = [0] * port_0_count
+                    # isStopped_0 = [0] * port_0_count
+                    isStopped_0 = [0 for i in range(port_0_count)]
+                    # isInThreshold_0 = [0] * port_0_count
+                    isInThreshold_0 = [0 for i in range(port_0_count)]
                 else:
                     isStopped_0 = []
                     isInThreshold_0 = []
                 if ports_used[1] == 1:
-                    isStopped_1 = [0] * port_1_count
-                    isInThreshold_1 = [0] * port_1_count
+                    # isStopped_1 = [0] * port_1_count
+                    isStopped_1 = [0 for i in range(port_1_count)]
+                    # isInThreshold_1 = [0] * port_1_count
+                    isInThreshold_1 = [0 for i in range(port_1_count)]
                 else:
                     isStopped_1 = []
                     isInThreshold_1 = []
                 if ports_used[2] == 1:
-                    isStopped_2 = [0] * port_2_count
-                    isInThreshold_2 = [0] * port_2_count
+                    # isStopped_2 = [0] * port_2_count
+                    isStopped_2 = [0 for i in range(port_2_count)]
+                    # isInThreshold_2 = [0] * port_2_count
+                    isInThreshold_2 = [0 for i in range(port_2_count)]
                 else:
                     isStopped_2 = []
                     isInThreshold_2 = []
                 if ports_used[3] == 1:
-                    isStopped_3 = [0] * port_3_count
-                    isInThreshold_3 = [0] * port_3_count
+                    # isStopped_3 = [0] * port_3_count
+                    isStopped_3 = [0 for i in range(port_3_count)]
+                    # isInThreshold_3 = [0] * port_3_count
+                    isInThreshold_3 = [0 for i in range(port_3_count)]
                 else:
                     isStopped_3 = []
                     isInThreshold_3 = []
                 if ports_used[4] == 1:
-                    isStopped_4 = [0] * port_4_count
-                    isInThreshold_4 = [0] * port_0_count
+                    # isStopped_4 = [0] * port_4_count
+                    isStopped_4 = [0 for i in range(port_4_count)]
+                    # isInThreshold_4 = [0] * port_0_count
+                    isInThreshold_4 = [0 for i in range(port_4_count)]
                 else:
                     isStopped_4 = []
                     isInThreshold_4 = []
                 if ports_used[5] == 1:
-                    isStopped_5 = [0] * port_5_count
-                    isInThreshold_5 = [0] * port_5_count
+                    # isStopped_5 = [0] * port_5_count
+                    isStopped_5 = [0 for i in range(port_5_count)]
+                    # isInThreshold_5 = [0] * port_5_count
+                    isInThreshold_5 = [0 for i in range(port_5_count)]
                 else:
                     isStopped_5 = []
                     isInThreshold_5 = []
                 # Add parameters for Velocity and Position change commands
+                # print("Clearing Goal Velocities and Positions: Top")
+                GoalVelocity = []
+                GoalPosition = []
+                Original_GoalVelocity = []
+                Original_GoalPosition = []
+                
                 for index, each_servo in enumerate(servo_list):
+                    Original_GoalVelocity.append(ServosDictionary[each_servo].Speeds[speed_index])
                     GoalVelocity.append(FormatSendData(int(ServosDictionary[each_servo].Speeds[speed_index])))
                     Original_GoalPosition.append(ServosDictionary[each_servo].Positions[position_index])
                     GoalPosition.append(FormatSendData(ServosDictionary[each_servo].Positions[position_index]))
+                    print("Servo {0}".format(each_servo))
+                    print('Original Goal Velocities: {0}'.format(Original_GoalVelocity))
+                    print('Original Goal Positions: {0}'.format(Original_GoalPosition))
+
                     if each_servo in port_0_list:
                         dxl_addparam_result = groupSyncWriteVEL_1.addParam(each_servo,GoalVelocity[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_1.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1192,10 +1266,15 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_2.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1215,10 +1294,15 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_3.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1233,15 +1317,20 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                             if dxl_addparam_result != True:
                                 print("[ID:%03d] groupSyncWrite addparam profile velocity failed" % each_servo)
                                 return
-                    if each_servo in port_3_list:
+                    elif each_servo in port_3_list:
                         dxl_addparam_result = groupSyncWriteVEL_4.addParam(each_servo,GoalVelocity[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_4.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1261,10 +1350,15 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_5.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1284,10 +1378,15 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam velocity failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Velocity Parameter Added = {1}".format(each_servo,Original_GoalVelocity[index]))
                         dxl_addparam_result = groupSyncWritePOS_6.addParam(each_servo,GoalPosition[index])
                         if dxl_addparam_result != True:
                             print("[ID:%03d] groupSyncWrite addparam position failed" % each_servo)
                             return
+                        else:
+                            print("Servo #{0}: Position Parameter Added = {1}".format(each_servo, Original_GoalPosition[index]))
+                        print("----------------------------------------------------")
                         # # Determine position difference for use in determining profile acceleration
                         if (position_index != 0):
                             pos_difference = abs(ServosDictionary[each_servo].Positions[position_index] - ServosDictionary[each_servo].Positions[position_index-1])
@@ -1303,8 +1402,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                 print("[ID:%03d] groupSyncWrite addparam profile velocity failed" % each_servo)
                                 return
                     else:
-                        print('Error in servo list. Please fix and try again.')
-                        
+                        print('[ID:%03d]: Error in servo list - Add Velocity, Position, and Profile parameters. Please fix and try again.' % each_servo)
+
                 # Write Velocity Profile, Acceleration Profile, and Velocity values
                 if ports_used[0] == 1:
                     if move_smooth == 1:
@@ -1413,13 +1512,15 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         print("%s - Velocity:Port 6" % packetHandler.getTxRxResult(dxl_comm_result))
                     # Clear syncwrite parameter storage
                     groupSyncWriteVEL_6.clearParam()
-                    
+
                 # Write Position Values
                 if ports_used[0] == 1:
                     # Syncwrite goal position
                     dxl_comm_result = groupSyncWritePOS_1.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 1" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #1 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_1.clearParam()
                 if ports_used[1] == 1:
@@ -1427,6 +1528,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     dxl_comm_result = groupSyncWritePOS_2.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 2" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #2 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_2.clearParam()
                 if ports_used[2] == 1:
@@ -1434,6 +1537,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     dxl_comm_result = groupSyncWritePOS_3.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 3" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #3 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_3.clearParam()
                 if ports_used[3] == 1:
@@ -1441,6 +1546,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     dxl_comm_result = groupSyncWritePOS_4.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 4" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #4 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_4.clearParam()
                 if ports_used[4] == 1:
@@ -1448,6 +1555,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     dxl_comm_result = groupSyncWritePOS_5.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 5" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #5 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_5.clearParam()
                 if ports_used[5] == 1:
@@ -1455,6 +1564,8 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                     dxl_comm_result = groupSyncWritePOS_6.txPacket()
                     if dxl_comm_result != COMM_SUCCESS:
                         print("%s - Position:Port 6" % packetHandler.getTxRxResult(dxl_comm_result))
+                    else:
+                        print("Positions sent for Port #6 of 6")
                     # Clear syncwrite parameter storage
                     groupSyncWritePOS_6.clearParam()
 
@@ -1483,6 +1594,12 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         groupSyncRead_Moving_6.addParam(each_servo)
                         groupSyncRead_Error_6.addParam(each_servo)
                         groupSyncRead_Position_6.addParam(each_servo)
+                
+                timeDiff_2 = time.time() - start_time
+                commTime = timeDiff_2-timeDiff_1
+                print("Communication time: {0}".format(commTime))
+                timeAllotted = timePerMove + commTime
+
                 while 1:
                     # Syncread Moving Value, Hardware Error Value, and Position Value
                     if ports_used[0] == 1:
@@ -1545,348 +1662,1857 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         dxl_comm_result = groupSyncRead_Position_6.txRxPacket()
                         if dxl_comm_result != COMM_SUCCESS:
                             print("%s - Position Value:Port 6" % packetHandler.getTxRxResult(dxl_comm_result))
+                    # Establish each index for 
                     index_1 = 0
                     index_2 = 0
                     index_3 = 0
                     index_4 = 0
                     index_5 = 0
                     index_6 = 0 
+
                     print("\n+-+-+-+ Cycle Stride #{0} / Move #{1} +-+-+-+".format(stride_count,position_index))
-                    for each_servo in ServosDictionary.keys():
+                    for servIndex, each_servo in enumerate(servo_list):
+                        # [i for i in ServosDictionary.keys() if i in LIMBS_ONLY]
                         # Get Error Code if Present. Change color on schematic if present.
                         # Get Dynamixel present Moving value
-                        if (each_servo in port_0_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_1.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_1.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_0[index_1] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_0[index_1] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_0[index_1] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_0[index_1] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_0[index_1] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                else:
-                                    pass 
-                            elif (dxl_mov == 0) and (isStopped_0[index_1] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                else:
+                        if tryMeSwitch == False:
+                            prev_pos = (ServosDictionary[each_servo].Positions[position_index-1] if position_index != 0 else ServosDictionary[each_servo].Positions[-1])
+                            if (each_servo in port_0_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_1.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_0[index_1] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_0[index_1] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_0[index_1] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_0[index_1] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_1 += 1
-                        if (each_servo in port_1_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_2.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_2.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_1[index_2] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_1[index_1] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_1[index_2] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_1[index_2] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_1[index_2] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
                                 else:
-                                    pass
-                            elif (dxl_mov == 0) and (isStopped_1[index_2] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_1.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_0[index_1] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
                                 else:
+                                    # 1 
+                                    if (dxl_mov == 0) and (isStopped_0[index_1] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_0[index_1] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                        
+                                    # 2    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass 
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_0[index_1] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_1 += 1
+                            if (each_servo in port_1_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_2.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_1[index_2] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_1[index_2] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_1[index_2] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_1[index_1] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_2 += 1
-                        if (each_servo in port_2_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_3.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_3.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_2[index_3] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_2[index_3] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_2[index_3] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_2[index_3] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_2[index_3] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
                                 else:
-                                    pass
-                            elif (dxl_mov == 0) and (isStopped_2[index_3] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_2.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_1[index_2] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
                                 else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_1[index_2] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_1[index_2] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_1[index_2] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_2 += 1
+                            if (each_servo in port_2_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_3.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_2[index_3] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_2[index_3] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_2[index_3] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_2[index_3] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_3 += 1
-                        if (each_servo in port_3_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_4.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_4.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_4.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_3[index_4] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_3[index_4] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_3[index_4] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_3[index_4] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_3[index_4] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
                                 else:
-                                    pass
-                            elif (dxl_mov == 0) and (isStopped_3[index_4] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_3.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_2[index_3] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
                                 else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_2[index_3] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_2[index_3] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_2[index_3] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_3 += 1
+                            if (each_servo in port_3_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_4.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_3[index_4] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_3[index_4] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_3[index_4] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_3[index_4] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_4 += 1
-                        if (each_servo in port_4_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_5.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_5.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_5.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_4[index_5] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_4[index_5] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_4[index_5] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_4[index_5] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_4[index_5] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
                                 else:
-                                    pass
-                            elif (dxl_mov == 0) and (isStopped_4[index_5] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_4.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_4.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_3[index_4] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
                                 else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_3[index_4] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_3[index_4] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_3[index_4] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_4 += 1
+                            if (each_servo in port_4_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_5.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_4[index_5] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_4[index_5] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_4[index_5] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_4[index_5] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_5 += 1
-                        if (each_servo in port_5_list) and (each_servo in LIMBS_ONLY):
-                            dxl_error = groupSyncRead_Error_6.getData(each_servo, AddrDict[26],1)
-                            if (dxl_error == 0):
-                                pass
-                            else:
-                                print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
-                                print(ErrorChecker(dxl_error))
-                                TilibotGUI.change_servo_color(each_servo,"blue")
-                            dxl_mov = groupSyncRead_Moving_6.getData(each_servo, AddrDict[39],1)
-                            dxl_pos = groupSyncRead_Position_6.getData(each_servo, AddrDict[44],4)
-                            if (dxl_mov == 0) and (isStopped_5[index_6] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
-                                isStopped_5[index_6] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            elif (dxl_mov == 1) and (isStopped_5[index_6] == 0) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving to desired position. Let it continue moving.
-                                pass 
-                            elif (dxl_mov == 0) and (isStopped_5[index_6] == 0) and not ((dxl_pos >=(Original_GoalPosition [position_index]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_5[index_6] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
-                                if ServosDictionary[each_servo].position_fixing == False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
                                 else:
-                                    pass
-                            elif (dxl_mov == 0) and (isStopped_5[index_6] == 1) and not ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
-                                if ServosDictionary[each_servo].position_fixing = False:
-                                    list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                    ServosDictionary[each_servo].position_fixing = True
-                                    ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_5.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_5.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_4[index_5] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
                                 else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_4[index_5] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_4[index_5] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_4[index_5] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_5 += 1
+                            if (each_servo in port_5_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_6.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
                                     pass
-                            elif (dxl_mov == 1) and (isStopped_5[index_6] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
-                                list_index = servo_list.index(ServosDictionary[each_servo].ID)
-                                # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 0) and (isStopped_5[index_6] == 1) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is where it needs to be and has registered as such. No further action required. 
-                                ServosDictionary[each_servo].position_fixing = False
-                                pass
-                            elif (dxl_mov == 1) and (isStopped_5[index_6] == 0) and ((dxl_pos >=(Original_GoalPosition[position_index] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[position_index] + MOVING_THRESHOLD_ACCURACY))):
-                                # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
-                                isStopped_5[index_6] = 1
-                                ServosDictionary[each_servo].position_fixing = False
-                            else:
-                                pass
-                            index_6 += 1
-                    if (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2) or (0 in isStopped_3) or (0 in isStopped_4) or (0 in isStopped_5):
-                        pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_6.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_6.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_5[index_6] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_5[index_6] == 0):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_5[index_6] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_5[index_6] == 0):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        print('Servo #{0} / Moving: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 4    
+                                    elif (dxl_mov == 1)  and (isStopped_5[index_6] == 1):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_5[index_6] == 1):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - Reached Destination: True'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+
+                                # Removable Testing
+                                analyseMe = createDataMat(analyseMe,each_servo-1,dxl_pos,position_index)
+                                print(Original_GoalPosition[servIndex])
+                                actualNums = createDataMat(actualNums,each_servo-1,Original_GoalPosition[servIndex],position_index)
+
+                                index_6 += 1
+                        else:
+                            prev_pos = (ServosDictionary[each_servo].Positions[position_index-1] if position_index != 0 else ServosDictionary[each_servo].Positions[-1])
+                            if (each_servo in port_0_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_1.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_1.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_0[index_1] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    
+                                    # 1 
+                                    if (dxl_mov == 0) and (isStopped_0[index_1] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_0[index_1] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_0[index_1] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_0[index_1] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3    
+                                    elif (dxl_mov == 0) and (isStopped_0[index_1] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_0[index_1] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_0[index_1] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass 
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_0[index_1] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7
+                                    elif (dxl_mov == 0) and (isStopped_0[index_1] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8    
+                                    elif (dxl_mov == 1) and (isStopped_0[index_1] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_0[index_1] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                
+                                index_1 += 1
+                            if (each_servo in port_1_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_2.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_2.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_1[index_2] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_1[index_2] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_1[index_2] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_1[index_2] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_1[index_2] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3
+                                    elif (dxl_mov == 0) and (isStopped_1[index_2] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_1[index_2] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_1[index_2] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_1[index_2] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7
+                                    elif (dxl_mov == 0) and (isStopped_1[index_2] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8
+                                    elif (dxl_mov == 1) and (isStopped_1[index_2] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_1[index_2] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                index_2 += 1
+                            if (each_servo in port_2_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_3.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_3.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_2[index_3] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_2[index_3] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_2[index_3] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_2[index_3] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_2[index_3] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3
+                                    elif (dxl_mov == 0) and (isStopped_2[index_3] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < (ServosDictionary[each_servo].Positions[position_index-1] if position_index != 0 else ServosDictionary[each_servo].Positions[-1]):
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_2[index_3] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > (ServosDictionary[each_servo].Positions[position_index-1] if position_index != 0 else ServosDictionary[each_servo].Positions[-1]):
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_2[index_3] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_2[index_3] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7
+                                    elif (dxl_mov == 0) and (isStopped_2[index_3] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8
+                                    elif (dxl_mov == 1) and (isStopped_2[index_3] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_2[index_3] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                index_3 += 1
+                            if (each_servo in port_3_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_4.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_4.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_4.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_3[index_4] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_3[index_4] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_3[index_4] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_3[index_4] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_3[index_4] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3
+                                    elif (dxl_mov == 0) and (isStopped_3[index_4] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_3[index_4] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_3[index_4] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5
+                                    elif (dxl_mov == 0) and (isStopped_3[index_4] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7
+                                    elif (dxl_mov == 0) and (isStopped_3[index_4] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8
+                                    elif (dxl_mov == 1) and (isStopped_3[index_4] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_3[index_4] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                index_4 += 1
+                            if (each_servo in port_4_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_5.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_5.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_5.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_4[index_5] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_4[index_5] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_4[index_5] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_4[index_5] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_4[index_5] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3
+                                    elif (dxl_mov == 0) and (isStopped_4[index_5] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_4[index_5] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo)) 
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_4[index_5] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))   # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))   # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_4[index_5] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7    
+                                    elif (dxl_mov == 0) and (isStopped_4[index_5] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8    
+                                    elif (dxl_mov == 1) and (isStopped_4[index_5] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_4[index_5] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                index_5 += 1
+                            if (each_servo in port_5_list) and (each_servo in LIMBS_ONLY):
+                                dxl_error = groupSyncRead_Error_6.getData(each_servo, AddrDict[26],1)
+                                if (dxl_error == 0):
+                                    pass
+                                else:
+                                    print('servo ' + str(each_servo) + ' error value: ' + str(dxl_error))
+                                    print(ErrorChecker(dxl_error))
+                                    TilibotGUI.change_servo_color(each_servo,"blue")
+                                    ServosDictionary[each_servo].error_present = True
+                                dxl_mov = groupSyncRead_Moving_6.getData(each_servo, AddrDict[39],1)
+                                dxl_pos = groupSyncRead_Position_6.getData(each_servo, AddrDict[44],4)
+                                print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
+                                if (ServosDictionary[each_servo].error_present == True):
+                                    isStopped_5[index_6] = 1
+                                    ServosDictionary[each_servo].position_fixing = False
+                                    print('Servo #{0} / Hardware Error Detected (Check Above). Skipping Error Checking'.format(each_servo))
+                                else:
+                                    # 1
+                                    if (dxl_mov == 0) and (isStopped_5[index_6] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex]- MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo has stopped moving, and is housed within the correct location threshold but has not been marked as finished, so that must be changed.
+                                        isStopped_5[index_6] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 2
+                                    elif (dxl_mov == 1) and (isStopped_5[index_6] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving to desired position. Let it continue moving.
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_5[index_6] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_5[index_6] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 3    
+                                    elif (dxl_mov == 0) and (isStopped_5[index_6] == 0) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold and has not registered as reaching its destination. Send move command again until servo is in correct place.
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        if Original_GoalPosition[servIndex] < prev_pos:
+                                            if dxl_pos < Original_GoalPosition[servIndex]:
+                                                isStopped_5[index_6] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        elif Original_GoalPosition[servIndex] > prev_pos:
+                                            if dxl_pos > Original_GoalPosition[servIndex]:
+                                                isStopped_5[index_6] = 1
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                            else:
+                                                print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                                print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                                print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                                print('-----------------------------')
+                                        else:
+                                            print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: False'.format(each_servo))
+                                            print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                            print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                            print('-----------------------------')
+                                    # 4    
+                                    elif (dxl_mov == 1) and (isStopped_5[index_6] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is moving but has already registered as reaching its destination but is not within the move threshold. Send the move command to hopefully send it back to the proper position. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: True - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 5    
+                                    elif (dxl_mov == 0) and (isStopped_5[index_6] == 1) and not ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is not moving but is not within the location threshold but has reached its destination. Send move command again until servo is in correct place. 
+                                        # if ServosDictionary[each_servo].position_fixing == False:
+                                        #     list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        #     ServosDictionary[each_servo].position_fixing = True
+                                        #     ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        # else:
+                                        #     pass
+                                        print('Servo #{0} / Moving: False - In Threshold: False - Reached Destination: True [DONE - Needs Fix]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 6    
+                                    elif (dxl_mov == 1) and (isStopped_5[index_6] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but has reached its destination and is within the move threshold. Send move command again so servo can hopefully stop moving.
+                                        list_index = servo_list.index(ServosDictionary[each_servo].ID)
+                                        # ServosDictionary[each_servo].MoveServo(Original_GoalPosition[list_index],port_hand_list[ServosDictionary[each_servo].port_used])
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 7    
+                                    elif (dxl_mov == 0) and (isStopped_5[index_6] == 1) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is where it needs to be and has registered as such. No further action required. 
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: False - In Threshold: True - Reached Destination: True [DONE]'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    # 8    
+                                    elif (dxl_mov == 1) and (isStopped_5[index_6] == 0) and ((dxl_pos >=(Original_GoalPosition[servIndex] - MOVING_THRESHOLD_ACCURACY)) and (dxl_pos <= (Original_GoalPosition[servIndex] + MOVING_THRESHOLD_ACCURACY))):
+                                        # Servo is still moving but is within the move threshold but has not been marked as reaching its destination. Mark the servo as having done so.
+                                        isStopped_5[index_6] = 1
+                                        ServosDictionary[each_servo].position_fixing = False
+                                        print('Servo #{0} / Moving: True - In Threshold: True - Reached Destination: False'.format(each_servo))
+                                        print('Servo #{0} / Needs to Travel: {1} - Has Traveled: {2}'.format(each_servo,abs(Original_GoalPosition[servIndex]-prev_pos),abs(dxl_pos-prev_pos)))
+                                        print("Servo #{0} / Previous Position: {1} - Given Speed: {2}".format(each_servo, prev_pos, Original_GoalVelocity[servIndex]))
+                                        print('-----------------------------')
+                                    else:
+                                        pass
+                                index_6 += 1
+                    print("+-+-+-+-+-+-+-+-+-+ End +-+-+-+-+-+-+-+-+\n")
+                    runTime = time.time() - start_time
+                    if (runTime - timeDiff_1) >= timeAllotted:
+                        if ports_used[0] == 1:
+                            groupSyncRead_Moving_1.clearParam()
+                            groupSyncRead_Error_1.clearParam()
+                        if ports_used[1] == 1:
+                            groupSyncRead_Moving_2.clearParam()
+                            groupSyncRead_Error_2.clearParam()
+                        if ports_used[2] == 1:
+                            groupSyncRead_Moving_3.clearParam()
+                            groupSyncRead_Error_3.clearParam()
+                        if ports_used[3] == 1:
+                            groupSyncRead_Moving_4.clearParam()
+                            groupSyncRead_Error_4.clearParam()
+                        if ports_used[4] == 1:
+                            groupSyncRead_Moving_5.clearParam()
+                            groupSyncRead_Error_5.clearParam()
+                        if ports_used[5] == 1:
+                            groupSyncRead_Moving_6.clearParam()
+                            groupSyncRead_Error_6.clearParam()
+                        if record_array[0] == True:
+                            if readers_exist == False:
+                                if ports_used[0] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[42],2)
+                                        port_1_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[47],2)
+                                        port_1_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_1 = GroupSyncRead(port_hand_list[0],packetHandler,AddrDict[48],1)
+                                        port_1_Temperature = []
+                                        readers_exist = True
+                                if ports_used[1] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[42],2)
+                                        port_2_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[47],2)
+                                        port_2_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_2 = GroupSyncRead(port_hand_list[1],packetHandler,AddrDict[48],1)
+                                        port_2_Temperature = []
+                                        readers_exist = True
+                                if ports_used[2] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[42],2)
+                                        port_3_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[47],2)
+                                        port_3_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_3 = GroupSyncRead(port_hand_list[2],packetHandler,AddrDict[48],1)
+                                        port_3_Temperature = []
+                                        readers_exist = True
+                                if ports_used[3] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_4 = GroupSyncRead(port_hand_list[3],packetHandler,AddrDict[42],2)
+                                        port_4_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_4 = GroupSyncRead(port_hand_list[3],packetHandler,AddrDict[47],2)
+                                        port_4_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_4 = GroupSyncRead(port_hand_list[3],packetHandler,AddrDict[48],1)
+                                        port_4_Temperature = []
+                                        readers_exist = True
+                                if ports_used[4] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_5 = GroupSyncRead(port_hand_list[4],packetHandler,AddrDict[42],2)
+                                        port_5_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_5 = GroupSyncRead(port_hand_list[4],packetHandler,AddrDict[47],2)
+                                        port_5_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_5 = GroupSyncRead(port_hand_list[4],packetHandler,AddrDict[48],1)
+                                        port_5_Temperature = []
+                                        readers_exist = True
+                                if ports_used[5] == 1:
+                                    if record_array[6] == True:
+                                        # Create Current Reader
+                                        groupSyncRead_Current_6 = GroupSyncRead(port_hand_list[5],packetHandler,AddrDict[42],2)
+                                        port_6_Current = []
+                                        readers_exist = True
+                                    if record_array[7] == True:
+                                        # Create Voltage Reader
+                                        groupSyncRead_Voltage_6 = GroupSyncRead(port_hand_list[5],packetHandler,AddrDict[47],2)
+                                        port_6_Voltage = []
+                                        readers_exist = True
+                                    if record_array[8] == True:
+                                        # Create Temperature Reader
+                                        groupSyncRead_Temperature_6 = GroupSyncRead(port_hand_list[5],packetHandler,AddrDict[48],1)
+                                        port_6_Temperature = []
+                                        readers_exist = True
+                            if readers_exist == True:
+                                for each_servo in servo_list:
+                                    if record_array[6] == True:
+                                        if ports_used[0] == 1:
+                                            groupSyncRead_Current_1.addParam(each_servo)
+                                        if ports_used[1] == 1:
+                                            groupSyncRead_Current_2.addParam(each_servo)
+                                        if ports_used[2] == 1:
+                                            groupSyncRead_Current_3.addParam(each_servo)
+                                        if ports_used[3] == 1:
+                                            groupSyncRead_Current_4.addParam(each_servo)
+                                        if ports_used[4] == 1:
+                                            groupSyncRead_Current_5.addParam(each_servo)
+                                        if ports_used[5] == 1:
+                                            groupSyncRead_Current_6.addParam(each_servo)
+                                    if record_array[7] == True:
+                                        if ports_used[0] == 1:
+                                            groupSyncRead_Voltage_1.addParam(each_servo)
+                                        if ports_used[1] == 1:
+                                            groupSyncRead_Voltage_2.addParam(each_servo)
+                                        if ports_used[2] == 1:
+                                            groupSyncRead_Voltage_3.addParam(each_servo)
+                                        if ports_used[3] == 1:
+                                            groupSyncRead_Voltage_4.addParam(each_servo)
+                                        if ports_used[4] == 1:
+                                            groupSyncRead_Voltage_5.addParam(each_servo)
+                                        if ports_used[5] == 1:
+                                            groupSyncRead_Voltage_6.addParam(each_servo)
+                                    if record_array[8] == True:
+                                        if ports_used[0] == 1:
+                                            groupSyncRead_Temperature_1.addParam(each_servo)
+                                        if ports_used[1] == 1:
+                                            groupSyncRead_Temperature_2.addParam(each_servo)
+                                        if ports_used[2] == 1:
+                                            groupSyncRead_Temperature_3.addParam(each_servo)
+                                        if ports_used[3] == 1:
+                                            groupSyncRead_Temperature_4.addParam(each_servo)
+                                        if ports_used[4] == 1:
+                                            groupSyncRead_Temperature_5.addParam(each_servo)
+                                        if ports_used[5] == 1:
+                                            groupSyncRead_Temperature_6.addParam(each_servo)
+                            if readers_exist == True:
+                                if record_array[6] == True:
+                                    if ports_used[0] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_1.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_front_servo in port_0_list:
+                                            if each_front_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_1.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_1_Current.append(groupSyncRead_Current_1.getData(each_front_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_1.clearParam()
+                                    if ports_used[1] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_2.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_back_servo in port_1_list:
+                                            if each_back_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_2.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_2_Current.append(groupSyncRead_Current_2.getData(each_back_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_2.clearParam()
+                                    if ports_used[2] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_3.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_bodyln_servo in port_2_list:
+                                            if each_bodyln_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_3.isAvailable(each_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_3_Current.append(groupSyncRead_Current_3.getData(each_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_3.clearParam()
+                                    if ports_used[3] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_4.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_front_servo in port_3_list:
+                                            if each_front_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_4.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_4_Current.append(groupSyncRead_Current_4.getData(each_front_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_4.clearParam()
+                                    if ports_used[4] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_5.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_back_servo in port_4_list:
+                                            if each_back_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_5.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_5_Current.append(groupSyncRead_Current_5.getData(each_back_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_5.clearParam()
+                                    if ports_used[5] == 1:
+                                        # Syncread present current
+                                        dxl_comm_result = groupSyncRead_Current_6.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_bodyln_servo in port_5_list:
+                                            if each_bodyln_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Current_6.isAvailable(each_servo, AddrDict[42], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present current value
+                                                port_6_Current.append(groupSyncRead_Current_6.getData(each_servo, AddrDict[42], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_6.clearParam()
+                                if record_array[7] == True:
+                                    if ports_used[0] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_1.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_front_servo in port_0_list:
+                                            if each_front_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(each_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                port_1_Voltage.append(groupSyncRead_Voltage_1.getData(each_servo, AddrDict[47], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Current_1.clearParam()
+                                    if ports_used[1] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_2.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_back_servo in port_1_list:
+                                            if each_back_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(each_back_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                port_2_Voltage.append(groupSyncRead_Voltage_2.getData(each_back_servo, AddrDict[47], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_2.clearParam()
+                                    if ports_used[2] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_3.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_bodyln_servo in port_2_list:
+                                            if each_bodyln_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(each_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                port_3_Voltage.append(groupSyncRead_Voltage_3.getData(each_servo, AddrDict[47], 2))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_3.clearParam()
+                                if record_array[8] == True:
+                                    if ports_used[0] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_1.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_front_servo in port_0_list:
+                                            if each_front_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_1_Temperature.append(groupSyncRead_Temperature_1.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_1.clearParam()
+                                    if ports_used[1] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_2.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_back_servo in port_1_list:
+                                            if each_back_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_2_Temperature.append(groupSyncRead_Temperature_2.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_2.clearParam()
+                                    if ports_used[2] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_3.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_bodyln_servo in port_2_list:
+                                            if each_bodyln_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_3_Temperature.append(groupSyncRead_Temperature_3.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_3.clearParam()
+                                    if ports_used[3] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_4.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_front_servo in port_3_list:
+                                            if each_front_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_4.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_4_Temperature.append(groupSyncRead_Temperature_4.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_4.clearParam()
+                                    if ports_used[4] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_5.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_back_servo in port_4_list:
+                                            if each_back_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_5.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_5_Temperature.append(groupSyncRead_Temperature_5.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_5.clearParam()
+                                    if ports_used[5] == 1:
+                                        # Syncread present temperature
+                                        dxl_comm_result = groupSyncRead_Temperature_6.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for each_bodyln_servo in port_5_list:
+                                            if each_bodyln_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Temperature_6.isAvailable(each_servo, AddrDict[48], 1)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    quit()
+                                                # Get Dynamixel present temperature value
+                                                port_6_Temperature.append(groupSyncRead_Temperature_6.getData(each_servo, AddrDict[48], 1))
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Temperature_6.clearParam()
+                            if readers_exist == True:
+                                for list_index,each_servo in enumerate(servo_list):
+                                    servo_data_array = [each_servo]
+                                    if record_array[1] == True:
+                                        pos_out = ServosDictionary[each_servo].Positions[position_index]
+                                        servo_data_array.append(pos_out)
+                                        # Record Position / self.Positions[stride_count]
+                                    if record_array[2] == True:
+                                        vel_out = ServosDictionary[each_servo].Speeds[stride_count]
+                                        servo_data_array.append(vel_out)
+                                        # Record Speed / self.Speeds[stride_count]
+                                    if record_array[3] == True:
+                                        record_time = time.time()
+                                        end_time = record_time - start_time
+                                        servo_data_array.append(end_time)
+                                        # Record Time / record_time - start_time
+                                    if record_array[4] == True:
+                                        pos_count = position_index
+                                        servo_data_array.append(pos_count)
+                                        # Record Position Index / position_count
+                                    if record_array[5] == True:
+                                        strd_count = stride_count
+                                        servo_data_array.append(strd_count)
+                                        # Record Stride Count / stride_count
+                                    if record_array[6] == True:
+                                        if each_servo in port_0_list:
+                                            dxl_current = port_1_Current[list_index]
+                                        elif each_servo in port_1_list:
+                                            dxl_current = port_2_Current[list_index-(port_0_count)]
+                                        elif each_servo in port_2_list:
+                                            dxl_current = port_3_Current[list_index-(port_0_count+port_1_count)]
+                                        elif each_servo in port_3_list:
+                                            dxl_current = port_4_Current[list_index-(port_0_count+port_1_count+port_2_count)]
+                                        elif each_servo in port_4_list:
+                                            dxl_current = port_5_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
+                                        elif each_servo in port_5_list:
+                                            dxl_current = port_6_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
+                                        servo_data_array.append(dxl_current)
+                                    if record_array[7] == True:
+                                        if each_servo in port_0_list:
+                                            dxl_voltage = port_1_Voltage[list_index]
+                                        elif each_servo in port_1_list:
+                                            dxl_voltage = port_2_Voltage[list_index-(port_0_count)]
+                                        elif each_servo in port_2_list:
+                                            dxl_voltage = port_3_Voltage[list_index-(port_0_count+port_1_count)]
+                                        elif each_servo in port_3_list:
+                                            dxl_voltage = port_4_Voltage[list_index-(port_0_count+port_1_count+port_2_count)]
+                                        elif each_servo in port_4_list:
+                                            dxl_voltage = port_5_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
+                                        elif each_servo in port_5_list:
+                                            dxl_voltage = port_6_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
+                                        servo_data_array.append(dxl_voltage)
+                                    if record_array[8] == True:
+                                        if each_servo in port_0_list:
+                                            dxl_temp = port_1_Temperature[list_index]
+                                        elif each_servo in port_1_list:
+                                            dxl_temp = port_2_Temperature[list_index-(port_0_count)]
+                                        elif each_servo in port_2_list:
+                                            dxl_temp = port_3_Temperature[list_index-(port_0_count+port_1_count)]
+                                        elif each_servo in port_3_list:
+                                            dxl_temp = port_4_Temperature[list_index-(port_0_count+port_1_count+port_2_count)]
+                                        elif each_servo in port_4_list:
+                                            dxl_temp = port_5_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
+                                        elif each_servo in port_5_list:
+                                            dxl_temp = port_6_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
+                                        servo_data_array.append(dxl_temp)
+                                    out_data.append(servo_data_array)
+                            if record_array[6] == True:
+                                if ports_used[0] == 1:
+                                    port_1_Current = []
+                                if ports_used[1] == 1:
+                                    port_2_Current = []
+                                if ports_used[2] == 1:
+                                    port_3_Current = []
+                                if ports_used[3] == 1:
+                                    port_4_Current = []
+                                if ports_used[4] == 1:
+                                    port_5_Current = []
+                                if ports_used[5] == 1:
+                                    port_6_Current = []
+                            if record_array[7] == True:
+                                if ports_used[0] == 1:
+                                    port_1_Voltage = []
+                                if ports_used[1] == 1:
+                                    port_2_Voltage = []
+                                if ports_used[2] == 1:
+                                    port_3_Voltage = []
+                                if ports_used[3] == 1:
+                                    port_4_Voltage = []
+                                if ports_used[4] == 1:
+                                    port_5_Voltage = []
+                                if ports_used[5] == 1:
+                                    port_6_Voltage = []
+                            if record_array[8] == True:
+                                if ports_used[0] == 1:
+                                    port_1_Temperature = []
+                                if ports_used[1] == 1:
+                                    port_2_Temperature = []
+                                if ports_used[2] == 1:
+                                    port_3_Temperature = []
+                                if ports_used[3] == 1:
+                                    port_4_Temperature = []
+                                if ports_used[4] == 1:
+                                    port_5_Temperature = []
+                                if ports_used[5] == 1:
+                                    port_6_Temperature = []
+                        # print("Clearing Goal Velocities and Positions: Bottom")
+                        GoalVelocity = []
+                        GoalPosition = []
+                        break
+                    elif (0 in isStopped_0) or (0 in isStopped_1) or (0 in isStopped_2) or (0 in isStopped_3) or (0 in isStopped_4) or (0 in isStopped_5):
+                        continue
                     else:
                         if ports_used[0] == 1:
                             groupSyncRead_Moving_1.clearParam()
@@ -2395,9 +4021,21 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     port_5_Temperature = []
                                 if ports_used[5] == 1:
                                     port_6_Temperature = []
+                        # print("Clearing Goal Velocities and Positions: Bottom")
                         GoalVelocity = []
                         GoalPosition = []
                         break
+
+    # Removable Testing
+    headerNames = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15','s16']
+    analyseMeDF = pd.DataFrame(np.array(analyseMe))
+    analyseMeDF.columns = headerNames
+    expectedNumsDF = pd.DataFrame(np.array(actualNums))
+    expectedNumsDF.columns = headerNames
+    analyseMeDF.to_csv('outTest.csv',index=False,sep=',')
+    expectedNumsDF.to_csv('outExpected.csv',index=False,sep=',')
+
+    
     return out_data
 
 def Write_Doc(record_array, out_data):
@@ -2436,7 +4074,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
         ports_used = [0, 0, 0, 0, 0, 0]
         for used_servo in servo_list:
             if any(port_servo_dict[used_servo] == port_hand_list[0] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
@@ -2446,7 +4084,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[1] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
@@ -2466,7 +4104,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[3] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[36], 4)
@@ -2476,7 +4114,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[4] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[36], 4)
@@ -2526,32 +4164,38 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
             elif (ServosDictionary[each_servo].port_used == 5):
                 port_5_count += 1
                 port_5_list.append(each_servo)
-    
+
         GoalVelocity = []
         GoalPosition = []
 
         if ports_used[0] == 1:
-            isStopped_0 = [0] * port_0_count
+            # isStopped_0 = [0] * port_0_count
+            isStopped_0 = [0 for i in range(port_0_count)]
         else:
             isStopped_0 = []
         if ports_used[1] == 1:
-            isStopped_1 = [0] * port_1_count
+            # isStopped_1 = [0] * port_1_count
+            isStopped_1 = [0 for i in range(port_1_count)]
         else:
             isStopped_1 = []
         if ports_used[2] == 1:
-            isStopped_2 = [0] * port_2_count
+            # isStopped_2 = [0] * port_2_count
+            isStopped_2 = [0 for i in range(port_2_count)]
         else:
             isStopped_2 = []
         if ports_used[3] == 1:
-            isStopped_3 = [0] * port_3_count
+            # isStopped_3 = [0] * port_3_count
+            isStopped_3 = [0 for i in range(port_3_count)]
         else:
             isStopped_3 = []
         if ports_used[4] == 1:
-            isStopped_4 = [0] * port_4_count
+            # isStopped_4 = [0] * port_4_count
+            isStopped_4 = [0 for i in range(port_4_count)]
         else:
             isStopped_4 = []
         if ports_used[5] == 1:
-            isStopped_5 = [0] * port_5_count
+            # isStopped_5 = [0] * port_5_count
+            isStopped_5 = [0 for i in range(port_5_count)]
         else:
             isStopped_5 = []
 
@@ -2613,7 +4257,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
                     print("[ID:%03d] groupSyncWrite SPIDER-UP addparam position failed" % each_servo)
                     return
             else:
-                print('Error in servo list. Please fix and try again.')
+                print('[ID:%03d]: Error in servo list - Move Spider Up. Please fix and try again.' % each_servo)
         if ports_used[0] == 1:
             # Syncwrite goal velocity
             dxl_comm_result = groupSyncWriteVEL_1.txPacket()
@@ -2882,7 +4526,7 @@ def Move_Spider_Up(TilibotGUI, servo_list, ServosDictionary, port_hand_list, por
                         groupSyncRead_Error_6.addParam(each_servo)
             else:
                 break
-                
+
 def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, in_home_speed, DigitalOnly):
     if DigitalOnly == True:
         pass
@@ -2890,7 +4534,7 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
         ports_used = [0, 0, 0, 0, 0, 0]
         for used_servo in servo_list:
             if any(port_servo_dict[used_servo] == port_hand_list[0] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_1 = GroupSyncWrite(port_hand_list[0], packetHandler, AddrDict[36], 4)
@@ -2900,7 +4544,7 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[1] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_2 = GroupSyncWrite(port_hand_list[1], packetHandler, AddrDict[36], 4)
@@ -2920,7 +4564,7 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[3] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_4 = GroupSyncWrite(port_hand_list[3], packetHandler, AddrDict[36], 4)
@@ -2930,7 +4574,7 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
             else:
                 pass
             if any(port_servo_dict[used_servo] == port_hand_list[4] for used_servo in servo_list):
-                 # Initialize GroupSyncWrite instance
+                # Initialize GroupSyncWrite instance
                 groupSyncWritePOS_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[37], 4)
                 # Initialize GroupSyncWrite instance
                 groupSyncWriteVEL_5 = GroupSyncWrite(port_hand_list[4], packetHandler, AddrDict[36], 4)
@@ -2983,35 +4627,41 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
         GoalVelocity = []
         GoalPosition = []
         if ports_used[0] == 1:
-            isStopped_0 = [0] * port_0_count
+            isStopped_0 = [0 for i in range(port_0_count)]
+            # isStopped_0 = [0] * port_0_count
         else:
             isStopped_0 = []
-            
+
         if ports_used[1] == 1:
-            isStopped_1 = [0] * port_1_count
+            isStopped_1 = [0 for i in range(port_1_count)]
+            # isStopped_1 = [0] * port_1_count
         else:
             isStopped_1 = []
-            
+
         if ports_used[2] == 1:
-            isStopped_2 = [0] * port_2_count
+            isStopped_2 = [0 for i in range(port_2_count)]
+            # isStopped_2 = [0] * port_2_count
         else:
             isStopped_2 = []
-            
+
         if ports_used[3] == 1:
-            isStopped_3 = [0] * port_3_count
+            isStopped_3 = [0 for i in range(port_3_count)]
+            # isStopped_3 = [0] * port_3_count
         else:
             isStopped_3 = []
-            
+
         if ports_used[4] == 1:
-            isStopped_4 = [0] * port_4_count
+            isStopped_4 = [0 for i in range(port_4_count)]
+            # isStopped_4 = [0] * port_4_count
         else:
             isStopped_4 = []
-            
+
         if ports_used[5] == 1:
-            isStopped_5 = [0] * port_5_count
+            isStopped_5 = [0 for i in range(port_5_count)]
+            # isStopped_5 = [0] * port_5_count
         else:
             isStopped_5 = []
-            
+
         for index, each_servo in enumerate(servo_list):
             GoalVelocity.append(FormatSendData(int(in_home_speed)))
             GoalPosition.append(FormatSendData(SPIDER_DOWN[each_servo]))
@@ -3070,7 +4720,7 @@ def Move_Spider_Down(TilibotGUI, servo_list, ServosDictionary, port_hand_list, p
                     print("[ID:%03d] groupSyncWrite SPIDER-DOWN addparam position failed" % each_servo)
                     return
             else:
-                print('Error in servo list. Please fix and try again.')
+                print('[ID:%03d]: Error in servo list - Move Spider Down. Please fix and try again.' % each_servo)
         if ports_used[0] == 1:
             # Syncwrite goal velocity
             dxl_comm_result = groupSyncWriteVEL_1.txPacket()
@@ -3378,10 +5028,9 @@ def Reset_For_Run(ServosDictionary,port_hand_list):
             each_servo.ToggleTorque(0,port_hand_list[4])
         elif (each_servo.port_used == 5):
             each_servo.ToggleTorque(0,port_hand_list[5])
-    
+
 def ShutDown():
     print("+-+-+-+-+Shutting down system.+-+-+-+-+\n")
     # Turn off power to external boards and other systems
     print("Thank you for using Tilibot!\n")
 
-## Tilibot Functions

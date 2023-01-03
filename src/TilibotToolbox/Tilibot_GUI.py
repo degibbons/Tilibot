@@ -10,7 +10,12 @@ import tkinter.font as tkFont
 from PIL import ImageTk,Image 
 import time
 from Tilibot_Constants import *
-from Tilibot_Functions import *
+
+# from Tilibot_Functions import *
+
+# from Tilibot_Functions_noThres2 import *
+from Tilibot_Functions_debug1 import *
+
 from Tilibot_Classes import *
 from Tilibot_Universal_Functions import *
 from dynamixel_sdk import *
@@ -675,7 +680,7 @@ class MainWindow(tk.Tk):
             self.Config_Options["hindlimb_stance_time"] = float(self.HL_st_ratio.get()) # Set Hindlimb Stance Time to pre-determined value
             self.Config_Options["hindlimb_swing_time"] = float(self.HL_sw_ratio.get()) # Set Hindlimb Swing Time to pre-determined value
             self.Config_Options["tot_ratio_time"] = float(self.Forelimb_Ratio_Time_label['text'])
-            print("apply move settings - " + str(self.Config_Options["tot_ratio_time"]))
+            print("\nApplying move ratio settings - " + str(self.Config_Options["tot_ratio_time"]) + "s")
         else:
             messagebox.showwarning(title="Ratio Error", message="Ratio times for Front and Hind Limbs do not match. Please fix and try again.")
             
@@ -1038,9 +1043,11 @@ class MainWindow(tk.Tk):
             self.ServosDictionary = Create_DigitalServos(config_array,self.port_used_dict,self.PositionsMatrix,
                 self.SpeedMatrix) # Create a dictionary of digital servo objects to represent physical servos in digital space
             Obj_list.append(self.ServosDictionary) # Append the dictionary to the object list
+            print("\n")
             if any(config_array[6]):
                 LimbDictionary = Create_DigitalLimbs(config_array[6],self.ServosDictionary) # Create a dictionary of digital limb objects to represent physical servos in digital space
                 Obj_list.append(LimbDictionary) # Append the dictionary to the object list
+                print("\n")
             if self.confirmed_action[0] == 1: # Move Single Servo
                 servo_to_move = self.ServosDictionary[self.confirmed_action[1]] # Identify single servo to move object
                 servo_to_move.InitialSetup(self.port_servo_dict[servo_to_move.ID],config_array[31]) # Run digital servo through initial setup protocol to set system variables
@@ -1078,6 +1085,7 @@ class MainWindow(tk.Tk):
             messagebox.showerror(title="Error",message="Error - Global Settings not set yet. Cannot detect servos without global settings.")
         else:
             self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["green"]) # Set the indicator light to green, indicating the robot is now running a trial
+            print("\n&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
             print("Enter Tilibot Run - Start")
             config_array = list(self.Config_Options.values()) # Creat a config_array list using the dictionary values
             if self.confirmed_action[0] == 1: # Move One Servo
@@ -1091,7 +1099,7 @@ class MainWindow(tk.Tk):
             elif self.confirmed_action[0] == 2: # Move Numerous Servos
                 print("Option Move Multiple Servos Detected")
                 start_time = time.time() # Set a base time using the clock on the running computer
-                out_data = MoveNumerousServos(self,self.confirmed_action[1],self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
+                out_data = MoveNumerousServos(self,self.move_list,self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
                     self.packetHandler,self.stride_numbers,self.record_array, start_time, self.movement_smoothing, config_array[32]) # Go through using the Continuous Move Function for the corresponding servos
                 record_time = time.time() # Set a base End Time using the clock on the running computer
                 end_time = record_time - start_time # Calculate the amount of time that passed over the trial
@@ -1099,6 +1107,9 @@ class MainWindow(tk.Tk):
                 if config_array[32] == False: # If run digital only is set to false
                     if self.record_array[0] == True: # If recording data is set to true
                         Write_Doc(self.record_array,out_data) # Write the data to the desired document
+            print("\nExit Tilibot Run - Finished With Time of: {:.3f}".format(end_time))
+            print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
+
             self.indicator_canvas.itemconfig(self.indic_oval, fill="#6600CC") # Set the indicator to purple, indicating the robot is finished running the current trial
             Step_Progressor = 7
 

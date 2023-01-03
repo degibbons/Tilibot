@@ -20,9 +20,10 @@ class Servo:
         self.packetHandler = PacketHandler(PROTOCOL_VERSION)
         self.port_used = port_used
         self.position_fixing = False
+        self.error_present = False
 
     def InitialSetup(self,portHandler,silenceYesNo): 
-        print("#############################################################")
+        print("######### Servo Build #########")
         print("Servo #%0.3d" %(self.ID))
         if self.digital_only == False:
             portHandler.openPort()
@@ -128,6 +129,7 @@ class Servo:
             elif dxl_error != 0:
                 print("%s" % self.packetHandler.getRxPacketError(dxl_error))
             else:
+                print("############ Servo Prep ################")
                 print("[ID:%03d] Velocity limit set to: %03d" %(self.ID, InVelocity))
         elif self.digital_only == True:
             print("[ID:%03d] Digital Only Velocity set." %(self.ID))
@@ -135,7 +137,7 @@ class Servo:
     def MoveServo(self,InPosition,portHandler):
         if self.digital_only == False:
              # Write goal position
-            dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(portHandler, self.ID, AddrDict[37], InPosition)
+            dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(portHandler, self.ID, AddrDict[37], FormatSendData(InPosition))
             if dxl_comm_result != COMM_SUCCESS:
                 print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
             elif dxl_error != 0:
@@ -148,7 +150,8 @@ class Servo:
     def MoveHome(self,homespeed,portHandler):
         self.SetServoVelocity(homespeed,portHandler)
         self.MoveServo(self.Positions[0],portHandler)
-        print("#############################################################")
+        print("[ID:%03d] Servo Moving Home" %(self.ID))
+        print("########################################")
 
 
     def ContinuousMove(self,portHandler,stride_numbers,record_array,start_time):
@@ -225,7 +228,7 @@ class Servo:
                     print("[ID:%03d] Digital Only Velocity set." %(self.ID))
                     print("[ID:%03d] Digital Only Position set." %(self.ID))
                     if record_array[0] == True:
-                        print("#############################################################")
+                        print("##### Single Servo Continuous Move #######")
                         if record_array[1] == True:
                             pos_out = self.Positions[position_count]
                             print("[ID:%03d] Digital Only Position is %d." %(self.ID,self.Positions[stride_count]))
@@ -245,7 +248,7 @@ class Servo:
                             print("[ID:%03d] Digital Only Position Voltage - Not Available." %(self.ID))
                         if record_array[8] == True:
                             print("[ID:%03d] Digital Only Position Temperature - Not Available." %(self.ID))
-                        print("#############################################################")
+                        print("########################################")
         return out_data
 
     def CleanUp(self):

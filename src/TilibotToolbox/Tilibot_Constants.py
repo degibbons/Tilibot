@@ -8,7 +8,7 @@ ADDR_PRO_TORQUE_ENABLE      = 64               # Control table address is differ
 ADDR_PRO_GOAL_POSITION      = 116
 ADDR_VELOCITY_LIMIT         = 44            #4
 ADDR_DRIVE_MODE             = 10            #1          0       # |0=vELOCITY BASED| 1=TIME_BASED|
-DRIVE_MODE_VEL_BASED        = 0            #establish default drive mode, time or vel based
+DRIVE_MODE_VEL_BASED        = 0                                 #establish default drive mode, time or vel based
 ADDR_OPERATING_MODE         = 11            #1          3       # |0	Current Control Mode	DYNAMIXEL only controls current(torque) regardless of spe ed and position. This mode is ideal for a gripper or a system that only uses current(torque) control or a system that has additional velocity/position controllers.
 OPERATING_JOINT_POSITION_MODE = 3
 ADDR_ACCELERATION_LIMIT     = 40            #4          32767
@@ -18,7 +18,7 @@ ADDR_MIN_POSITION_LIMIT     = 52            #4          0
 MAX_POSITION_LIMIT          = 4095
 MIN_POSITION_LIMIT          = 0
 ADDR_MOVING_THRESHOLD       = 24            #4          10      #ESSENTIALLY ACCURACY TOLERANCE
-MOVING_THRESHOLD_ACCURACY   = 1
+MOVING_THRESHOLD_ACCURACY   = 12
 ADDR_PROFILE_VELOCITY       = 112
 ADDR_MOVING                 = 122 
 
@@ -69,6 +69,7 @@ SPINE   = [DXL19_ID, DXL20_ID, DXL21_ID, DXL22_ID]
 TAIL    = [DXL23_ID, DXL24_ID]
 BODY_LENGTH = [DXL17_ID, DXL18_ID, DXL19_ID, DXL20_ID, DXL21_ID, DXL22_ID, DXL23_ID, DXL24_ID]
 BODY = [F_R_ARM, F_L_ARM, B_R_ARM, B_L_ARM, NECK, SPINE, TAIL]
+
 BODY_LIMB_IDS = [1, 2, 3, 4, 5, 6, 7]
 LEG_LIMBS_IDS= [1, 2, 3, 4]
 LEG_LIMB_IDS_FRONT = [1, 2]
@@ -78,7 +79,7 @@ BODY_LENGTH_LIMB_IDS = [5, 6, 7]
 
 BAUDRATE                    = 1000000             # Dynamixel default baudrate : 57600
 DEVICENAME_1                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
-                                                # ex) Windows: "COM1"   Linux: "/dev/ttyUSB0" Mac: "/dev/tty.usbserial-*"
+                                                  # ex) Windows: "COM1"   Linux: "/dev/ttyUSB0" Mac: "/dev/tty.usbserial-*"
 DEVICENAME_2                  = '/dev/ttyUSB1'
 DEVICENAME_3                  = '/dev/ttyUSB2'
 DEVICENAME_4                  = '/dev/ttyUSB3'
@@ -88,7 +89,7 @@ DEVICENAMES = [DEVICENAME_1, DEVICENAME_2, DEVICENAME_3, DEVICENAME_4, DEVICENAM
 
 FACTORYRST_DEFAULTBAUDRATE  = 57600                         # Dynamixel baudrate set by factoryreset
 NEW_BAUDNUM                 = 3                             # New baudnum to recover Dynamixel baudrate as it was
-DYNAMIXEL_SPEED_CONSTANT = 0.229                            # RPM i.e. a motor set to 300 speed is moving ccw direction at a rate of 34.33 rpm
+DYNAMIXEL_SPEED_CONSTANT    = 0.229                         # RPM i.e. a motor set to 300 speed is moving ccw direction at a rate of 34.33 rpm
 COMM_SUCCESS                = 0                             # Communication Success result value
 COMM_TX_FAIL                = -1001                         # Communication Tx Failed
 
@@ -107,6 +108,8 @@ LEN_MOVING                  = 1
 dxl_goal_position = [DXL_MINIMUM_POSITION_VALUE, DXL_MAXIMUM_POSITION_VALUE]         # Goal position
 
 LimbNames = {1:"Front Right", 2:"Front Left", 3:"Back Right", 4:"Back Left", 5:"Neck", 6:"Spine", 7:"Tail"}
+
+SCALING_DIFFERENCE = 5
 
 HOME_SPEED = 50
 STRAIGHT_SPINE = 2048
@@ -203,6 +206,14 @@ AddrDict = {                          #Byte Size
     46: 140, # Position Trajectory      4
     47: 144, # Present Input Voltage    2   
     48: 146 # Present Temperature       1  
+}
+
+HardwareErrorStatus = {
+    1: 'Input Voltage Error', # Detects that input voltage exceeds the configured operating voltage
+    2: 'Overheating Error', # Detects that internal temperature exceeds the configured operating temperature
+    3: 'Motor Encoder Error', # Detects malfunction of the motor encoder
+    4: 'Electrical Shock Error', # Detects electrical shock on the circuit or insufficient power to operate the motor
+    5: 'Overload Error' # Detects that persistent load that exceeds maximum output
 }
 
 PinPulseTime = 2 # Amount of time a pin will be pulsed in seconds
