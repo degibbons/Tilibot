@@ -14,7 +14,7 @@ from Tilibot_Constants import *
 # from Tilibot_Functions import *
 
 # from Tilibot_Functions_noThres2 import *
-from Tilibot_Functions_debug1 import *
+from Tilibot_Functions import *
 
 from Tilibot_Classes import *
 from Tilibot_Universal_Functions import *
@@ -89,7 +89,9 @@ class MainWindow(tk.Tk):
                             "spine_straight":None,
                             "tail_straight":None,
                             "silence_ext_output":None,
-                            "run_digital_only":None}
+                            "run_digital_only":None,
+                            "":None,
+                            "":None}
 
         # Help Box
         self.hb_object_box = None # Help box object
@@ -119,7 +121,7 @@ class MainWindow(tk.Tk):
         
         #  Initialize the GUI Window
         self.title("Tilibot Visual Controller") # Title of the tkinter window
-        self.geometry("1250x765+20+20") # Set size and origin position of tkinter window
+        self.geometry("1250x780+20+20") # Set size and origin position of tkinter window
 
         # create canvas
         self.myCanvas = tk.Canvas(master=self, bg="white", height = 750, width=650) # Create the canvas to draw on
@@ -205,6 +207,31 @@ class MainWindow(tk.Tk):
                             22:self.id_srv_22,
                             23:self.id_srv_23,
                             24:self.id_srv_24}
+
+        self.servo_box_colors = {1:self.myCanvas.itemcget(self.servo_graphics[1],"fill"),
+                            2:self.myCanvas.itemcget(self.servo_graphics[2],"fill"),
+                            3:self.myCanvas.itemcget(self.servo_graphics[3],"fill"),
+                            4:self.myCanvas.itemcget(self.servo_graphics[4],"fill"),
+                            5:self.myCanvas.itemcget(self.servo_graphics[5],"fill"),
+                            6:self.myCanvas.itemcget(self.servo_graphics[6],"fill"), 
+                            7:self.myCanvas.itemcget(self.servo_graphics[7],"fill"),
+                            8:self.myCanvas.itemcget(self.servo_graphics[8],"fill"),
+                            9:self.myCanvas.itemcget(self.servo_graphics[9],"fill"),
+                            10:self.myCanvas.itemcget(self.servo_graphics[10],"fill"),
+                            11:self.myCanvas.itemcget(self.servo_graphics[11],"fill"),
+                            12:self.myCanvas.itemcget(self.servo_graphics[12],"fill"),
+                            13:self.myCanvas.itemcget(self.servo_graphics[13],"fill"),
+                            14:self.myCanvas.itemcget(self.servo_graphics[14],"fill"),
+                            15:self.myCanvas.itemcget(self.servo_graphics[15],"fill"),
+                            16:self.myCanvas.itemcget(self.servo_graphics[16],"fill"),
+                            17:self.myCanvas.itemcget(self.servo_graphics[17],"fill"),
+                            18:self.myCanvas.itemcget(self.servo_graphics[18],"fill"),
+                            19:self.myCanvas.itemcget(self.servo_graphics[19],"fill"),
+                            20:self.myCanvas.itemcget(self.servo_graphics[20],"fill"),
+                            21:self.myCanvas.itemcget(self.servo_graphics[21],"fill"),
+                            22:self.myCanvas.itemcget(self.servo_graphics[22],"fill"),
+                            23:self.myCanvas.itemcget(self.servo_graphics[23],"fill"),
+                            24:self.myCanvas.itemcget(self.servo_graphics[24],"fill")}
 
         # Create labels to distinguish between subsets of limbs
         neck_label = self.myCanvas.create_text(250,130,text='Neck')
@@ -322,7 +349,7 @@ class MainWindow(tk.Tk):
         prog_title.grid(row=0,column=0,columnspan=3, sticky=tk.N+tk.W+tk.E) # Place title in frame 
         help_button = ttk.Button(master=frame_1, text="Help",command=self.open_help_box) # Create Help Button
         self.logo_canvas = tk.Canvas(master=frame_1,height=75, width=75) # Create the canvas to display the logo on
-        self.photoimage = ImageTk.PhotoImage(file="Tilibot_mini_S.png")
+        self.photoimage = ImageTk.PhotoImage(file="../../assets/Tilibot_mini_S.png")
         # img = ImageTk.PhotoImage(file=os.getcwd()+'\Tilibot_mini.png')
         self.logo_canvas.create_image(35,35,image=self.photoimage) 
         help_button.grid(column=0,row=1,pady=10,sticky=tk.W) # Place help button in frame
@@ -357,13 +384,15 @@ class MainWindow(tk.Tk):
         move_rb_many = ttk.Radiobutton(master=frame_3,text="Move Multiple Servos",variable=self.move_select,value=1) # Create Radio Button for moving multiple servo
         self.move_select.set(1) # Set the Multiple Servo Move button to be selected by default
         move_configure_button = ttk.Button(master=frame_3,text="Configure Options",command=self.open_move_box) # Create the Configure Movement button to put in movement ratio numbers
+        separator_3a = ttk.Separator(master=frame_3, orient="horizontal")
+        separator_3a.place(relx=0, rely=0.32,relwidth=1, relheight=1)
         self.record_yesno = tk.IntVar() # Create a tkinter variable to record if the user wants to record data or not
         record_data_checkbox = ttk.Checkbutton(master=frame_3, text="Record Data?",onvalue = 1,offvalue = 0,variable=self.record_yesno) # Create the data record checkbox for indicating if the user wants to record data or not
         self.record_yesno.set(value=0) # Set the default value of the record checkbox to NOT be selected
         record_data_configure_button = ttk.Button(master=frame_3, text="Configure Options",command=self.open_record_data_box) # Create the data configure button
         frame_3.grid(column=2,row=1,sticky=tk.N) # Place the frame on the tkinter window
-        move_rb_one.grid(row=0,column=0,sticky=tk.W) # Plcae the first radio button in frame
-        move_rb_many.grid(row=1,column=0,stick=tk.W) # Place the second radio button in frame
+        move_rb_one.grid(row=0,column=0,sticky=tk.W,pady=5) # Plcae the first radio button in frame
+        move_rb_many.grid(row=1,column=0,stick=tk.W,pady=5) # Place the second radio button in frame
         move_configure_button.grid(row=0,column=1,rowspan=2,sticky=tk.E,padx=5,pady=10) # Place the Move Configure button in frame
         record_data_checkbox.grid(row=2,column=0,sticky=tk.W) # Place the data checkbox in frame
         record_data_configure_button.grid(row=2,column=1,sticky=tk.E,padx=5,pady=10) # Place Data Configure button in frame
@@ -371,6 +400,20 @@ class MainWindow(tk.Tk):
         self.movement_smoothing.set(value=0) # Set the default value of the movement smoothing checkbox to NOT be selected
         movement_smoothing_checkbox = ttk.Checkbutton(master=frame_3, text="Smooth Movements?",onvalue = 1, offvalue = 0,variable=self.movement_smoothing) # Create checkbox to indicate whether to include movement smoothing
         movement_smoothing_checkbox.grid(row=3,column=0,sticky=tk.W) # Place the movement smoothing checkbox in the frame
+        self.pin_accuracy = tk.IntVar()
+        self.range_shortening=tk.IntVar()
+        pin_accuracy_tolerance_label = ttk.Label(master=frame_3, text="Pin Accuracy Tolerance (in pins): ")
+        pin_accuracy_tolerance_entry = ttk.Entry(master=frame_3, textvariable=self.pin_accuracy)
+        speed_range_shortening_label = ttk.Label(master=frame_3, text="Speed Range Shrink (Lower end): ")
+        speed_range_shortening_entry = ttk.Entry(master=frame_3, textvariable=self.range_shortening)
+        pin_accuracy_tolerance_label.grid(row=4,column=0,sticky=tk.E,padx=5,pady=5)
+        pin_accuracy_tolerance_entry.grid(row=4,column=1,sticky=tk.W,padx=5,pady=5)
+        speed_range_shortening_label.grid(row=5,column=0,sticky=tk.E,padx=5,pady=5)
+        speed_range_shortening_entry.grid(row=5,column=1,sticky=tk.W,padx=5,pady=5)
+        self.pin_accuracy.set(0)
+        self.range_shortening.set(0)
+        separator_3b = ttk.Separator(master=frame_3, orient="horizontal")
+        separator_3b.place(relx=0, rely=0.99,relwidth=1, relheight=1)
 
         frame_4 = tk.Frame(master=self) # Create Frame for Stride Variable Inputs, Run Time Labels, and the Indicator Light
         frame_4.grid(column=2,row=2,sticky=tk.N) # Place frame on tkinter window
@@ -454,8 +497,8 @@ class MainWindow(tk.Tk):
         try:
             calc_num = float(self.stride_time_entry_string.get()) * float(int(self.stride_amount_entry_string.get())) # Calculate the perfect run time using the two input numbers
             self.calc_end_time.set('{:.3f}'.format(calc_num)) # Set the calculated label to display the result
-            self.Config_Options["stride_time"] = float(self.stride_time_entry_string.get())
-            self.Config_Options["stride_amount"] = int(self.stride_amount_entry_string.get())
+            self.Config_Options["Stride-Time"] = float(self.stride_time_entry_string.get())
+            self.Config_Options["Stride-Amount"] = int(self.stride_amount_entry_string.get())
         except:
             pass    
 
@@ -558,26 +601,26 @@ class MainWindow(tk.Tk):
         apply_button.grid(row=4,column=0,pady=10) # Put Apply button in global settings window
         close_button.grid(row=4,column=1,pady=10) # Put Close button in global settings window
         # Apply settings to widgets if pre-loaded
-        if self.Config_Options["baud_rate"] != None: # If baud rate already exists
-            self.baud_rate_entry_string.set(str(self.Config_Options["baud_rate"])) # Set the display baud rate to the pre-determined baud rate
-        if self.Config_Options["home_speed"] != None: # If home speed already exists
-            self.home_speed_entry_string.set(str(self.Config_Options["home_speed"])) # Set the display home speed to the rpe-determined home speed
-        if self.Config_Options["run_digital_only"] == True: # If run digital only is pre-determined to be true
+        if self.Config_Options["Baud-Rate"] != None: # If baud rate already exists
+            self.baud_rate_entry_string.set(str(self.Config_Options["Baud-Rate"])) # Set the display baud rate to the pre-determined baud rate
+        if self.Config_Options["Home-Speed"] != None: # If home speed already exists
+            self.home_speed_entry_string.set(str(self.Config_Options["Home-Speed"])) # Set the display home speed to the rpe-determined home speed
+        if self.Config_Options["Run-Digital-Only"] == True: # If run digital only is pre-determined to be true
             self.run_condition.set(1) # Set the widget to be digital only
-        elif self.Config_Options["run_digital_only"] == False: # Else if run digital only is pre-determined to be false
+        elif self.Config_Options["Run-Digital-Only"] == False: # Else if run digital only is pre-determined to be false
             self.run_condition.set(0) # Set the widget to be physical only
         if self.Config_Options["connected_sensors"] == True: # If sensors connected is pre-determined to be true
             self.sensors_connect.set(1) # Set the widget to be checked
 
     def apply_global_settings(self): # Function to apply global settings to config dictionary variable when button pressed
         global Step_Progressor
-        self.Config_Options["baud_rate"] = int(self.baud_rate_entry_string.get()) # Set baud rate in Config_Options dictionary from entry input
-        self.Config_Options["home_speed"] = int(self.home_speed_entry_string.get()) # Set home speed in Config_Options dictionary from entry input
+        self.Config_Options["Baud-Rate"] = int(self.baud_rate_entry_string.get()) # Set baud rate in Config_Options dictionary from entry input
+        self.Config_Options["Home-Speed"] = int(self.home_speed_entry_string.get()) # Set home speed in Config_Options dictionary from entry input
         run_dig_result = self.run_condition.get() # Get the run condition from the radio buttons
         if run_dig_result == 1: # If run digital only is selected
-            self.Config_Options["run_digital_only"] = True # Set the value to true
+            self.Config_Options["Run-Digital-Only"] = True # Set the value to true
         else: # If run physically is selected
-            self.Config_Options["run_digital_only"] = False # Set the value to false
+            self.Config_Options["Run-Digital-Only"] = False # Set the value to false
         self.Config_Options["connected_sensors"] = bool(self.sensors_connect.get()) # Set the connected sensors variable equal to either true or false, dependent on the checkbox
         Step_Progressor = 1
         
@@ -635,16 +678,16 @@ class MainWindow(tk.Tk):
             apply_button.grid(row=6,column=0,pady=15) # Put Apply Button in tkinter window
             close_button.grid(row=6,column=3,pady=15) # Put Close Button in tkinter window
             # Apply settings to widgets if pre-loaded
-            if self.Config_Options["position_amount"] != None: # If Position Amount is pre-determined
-                self.pos_per_stride.set(str(self.Config_Options["position_amount"])) # Set the entry to display the pre-determined value
-            if self.Config_Options["forelimb_stance_time"] != None: # If Forelimb Stance is pre-determined
-                self.FL_st_ratio.set(str(self.Config_Options["forelimb_stance_time"])) # Set the entry to display the pre-determined value
-            if self.Config_Options["forelimb_swing_time"] != None: # If Forelimb Swing is pre-determined
-                self.FL_sw_ratio.set(str(self.Config_Options["forelimb_swing_time"])) # Set the entry to display the pre-determined value
-            if self.Config_Options["hindlimb_stance_time"] != None: # If Hindlimb Stance is pre-determined
-                self.HL_st_ratio.set(str(self.Config_Options["hindlimb_stance_time"])) # Set the entry to display the pre-determined value
-            if self.Config_Options["hindlimb_swing_time"] != None: # If Hindlimb Swing is pre-determined
-                self.HL_sw_ratio.set(str(self.Config_Options["hindlimb_swing_time"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["Positions-Per-Stride"] != None: # If Position Amount is pre-determined
+                self.pos_per_stride.set(str(self.Config_Options["Positions-Per-Stride"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["Forelimb-Stance"] != None: # If Forelimb Stance is pre-determined
+                self.FL_st_ratio.set(str(self.Config_Options["Forelimb-Stance"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["Forelimb-Swing"] != None: # If Forelimb Swing is pre-determined
+                self.FL_sw_ratio.set(str(self.Config_Options["Forelimb-Swing"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["Hindlimb-Stance"] != None: # If Hindlimb Stance is pre-determined
+                self.HL_st_ratio.set(str(self.Config_Options["Hindlimb-Stance"])) # Set the entry to display the pre-determined value
+            if self.Config_Options["Hindlimb-Swing"] != None: # If Hindlimb Swing is pre-determined
+                self.HL_sw_ratio.set(str(self.Config_Options["Hindlimb-Swing"])) # Set the entry to display the pre-determined value
             Step_Progressor = 4
         
     def add_fl_nums(self,*args): # Function to add forelimb ratios to find the total time
@@ -674,13 +717,13 @@ class MainWindow(tk.Tk):
     def apply_move_settings(self): # Function to set Config_Options dictionary values to pre-determined values
         # Check that total ratio times match first
         if self.Forelimb_Ratio_Time_label['text'] == self.Hindlimb_Ratio_Time_label['text']: # If both ratio times match eachother
-            self.Config_Options["position_amount"] = int(self.pos_per_stride.get()) # Set Position Amount to pre-determined value
-            self.Config_Options["forelimb_stance_time"] = float(self.FL_st_ratio.get()) # Set Forelimb Stance Time to pre-determined value
-            self.Config_Options["forelimb_swing_time"] = float(self.FL_sw_ratio.get()) # Set Forelimb Swing Time to pre-determined value
-            self.Config_Options["hindlimb_stance_time"] = float(self.HL_st_ratio.get()) # Set Hindlimb Stance Time to pre-determined value
-            self.Config_Options["hindlimb_swing_time"] = float(self.HL_sw_ratio.get()) # Set Hindlimb Swing Time to pre-determined value
-            self.Config_Options["tot_ratio_time"] = float(self.Forelimb_Ratio_Time_label['text'])
-            print("\nApplying move ratio settings - " + str(self.Config_Options["tot_ratio_time"]) + "s")
+            self.Config_Options["Positions-Per-Stride"] = int(self.pos_per_stride.get()) # Set Position Amount to pre-determined value
+            self.Config_Options["Forelimb-Stance"] = float(self.FL_st_ratio.get()) # Set Forelimb Stance Time to pre-determined value
+            self.Config_Options["Forelimb-Swing"] = float(self.FL_sw_ratio.get()) # Set Forelimb Swing Time to pre-determined value
+            self.Config_Options["Hindlimb-Stance"] = float(self.HL_st_ratio.get()) # Set Hindlimb Stance Time to pre-determined value
+            self.Config_Options["Hindlimb-Swing"] = float(self.HL_sw_ratio.get()) # Set Hindlimb Swing Time to pre-determined value
+            self.Config_Options["Ratio-Time"] = float(self.Forelimb_Ratio_Time_label['text'])
+            print("\nApplying move ratio settings - " + str(self.Config_Options["Ratio-Time"]) + "s")
         else:
             messagebox.showwarning(title="Ratio Error", message="Ratio times for Front and Hind Limbs do not match. Please fix and try again.")
             
@@ -743,38 +786,38 @@ class MainWindow(tk.Tk):
         apply_button.grid(row=0,column=0,sticky=tk.W,padx=10) # Place button in frame
         close_button.grid(row=0,column=1,sticky=tk.W,padx=10) # Place button in frame
         # Apply settings to widgets if pre-loaded
-        if self.Config_Options["out_file_dir"] != None: # If Output File Directory already exists
-            self.rd_target_dir.set(self.Config_Options["out_file_dir"]) # Set option in display
-        if self.Config_Options["out_file_name"] != None: # If Output File Name already exists
-            self.rd_out_file_name.set(self.Config_Options["out_file_name"]) # Set option in Display
-        if self.Config_Options["position_write"] != None: # If the Position record option is already selected
-            self.pos_output.set(self.Config_Options["position_write"]) # Set option in display
-        if self.Config_Options["speed_write"] != None: # If the Speed record option is already selected
-            self.speed_output.set(self.Config_Options["speed_write"]) # Set option in display
-        if self.Config_Options["time_write"] != None: # If the Time record option is already selected
-            self.time_output.set(self.Config_Options["time_write"]) # Set option in display
-        if self.Config_Options["posindex_write"] != None: # If the Position Index record option is already selected
-            self.pos_ind_output.set(self.Config_Options["posindex_write"]) # Set option in display
-        if self.Config_Options["stridecount_write"] != None: # If the Stride Count record option is already selected
-            self.stct_output.set(self.Config_Options["stridecount_write"]) # Set option in display
-        if self.Config_Options["current_write"] != None: # If the Current record option is already selected
-            self.current_output.set(self.Config_Options["current_write"]) # Set option in display
-        if self.Config_Options["voltage_write"] != None: # If the Voltage record option is already selected
-            self.voltage_output.set(self.Config_Options["voltage_write"]) # Set option in display
-        if self.Config_Options["temp_write"] != None: # If the Temperature record option is already selected
-            self.temp_output.set(self.Config_Options["temp_write"]) # Set option in display
+        if self.Config_Options["Output-File-Directory"] != None: # If Output File Directory already exists
+            self.rd_target_dir.set(self.Config_Options["Output-File-Directory"]) # Set option in display
+        if self.Config_Options["Output-File-Name"] != None: # If Output File Name already exists
+            self.rd_out_file_name.set(self.Config_Options["Output-File-Name"]) # Set option in Display
+        if self.Config_Options["Position"] != None: # If the Position record option is already selected
+            self.pos_output.set(self.Config_Options["Position"]) # Set option in display
+        if self.Config_Options["Speed"] != None: # If the Speed record option is already selected
+            self.speed_output.set(self.Config_Options["Speed"]) # Set option in display
+        if self.Config_Options["Time"] != None: # If the Time record option is already selected
+            self.time_output.set(self.Config_Options["Time"]) # Set option in display
+        if self.Config_Options["Position-Index"] != None: # If the Position Index record option is already selected
+            self.pos_ind_output.set(self.Config_Options["Position-Index"]) # Set option in display
+        if self.Config_Options["Stride-Count"] != None: # If the Stride Count record option is already selected
+            self.stct_output.set(self.Config_Options["Stride-Count"]) # Set option in display
+        if self.Config_Options["Current"] != None: # If the Current record option is already selected
+            self.current_output.set(self.Config_Options["Current"]) # Set option in display
+        if self.Config_Options["Voltage"] != None: # If the Voltage record option is already selected
+            self.voltage_output.set(self.Config_Options["Voltage"]) # Set option in display
+        if self.Config_Options["Temperature"] != None: # If the Temperature record option is already selected
+            self.temp_output.set(self.Config_Options["Temperature"]) # Set option in display
 
     def apply_record_settings(self): # Function to apply input settings to Config_Options dictionary
-        self.Config_Options["out_file_dir"] = str(self.rd_target_dir.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["out_file_name"] = str(self.rd_out_file_name.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["position_write"] = bool(self.pos_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["speed_write"] = bool(self.speed_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["time_write"] = bool(self.time_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["posindex_write"] = bool(self.pos_ind_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["stridecount_write"] = bool(self.stct_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["current_write"] = bool(self.current_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["voltage_write"] = bool(self.voltage_output.get()) # Set variable in Config_Options dictionary to input value
-        self.Config_Options["temp_write"] = bool(self.temp_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Output-File-Directory"] = str(self.rd_target_dir.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Output-File-Name"] = str(self.rd_out_file_name.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Position"] = bool(self.pos_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Speed"] = bool(self.speed_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Time"] = bool(self.time_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Position-Index"] = bool(self.pos_ind_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Stride-Count"] = bool(self.stct_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Current"] = bool(self.current_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Voltage"] = bool(self.voltage_output.get()) # Set variable in Config_Options dictionary to input value
+        self.Config_Options["Temperature"] = bool(self.temp_output.get()) # Set variable in Config_Options dictionary to input value
 
     def select_targ_dir(self): # Function to open up a file explorer window to select a target directory when the button is hit
         selected_directory = fdlg.askdirectory() # Open up file explorer and ask for directory 
@@ -863,10 +906,10 @@ class MainWindow(tk.Tk):
         if Step_Progressor < 1:
             messagebox.showerror(title="Error",message="Error - Global Settings not set yet. Cannot detect servos without global settings.")
         else:
-            if self.Config_Options["baud_rate"] != None: # If the baud rate has been set
+            if self.Config_Options["Baud-Rate"] != None: # If the baud rate has been set
                 connected_servo_list = [] # Establish a list for all detected servos to be added to
                 connected_limb_list = [] # Establish a list for all detected limbs to be added to
-                portHandler_1, portHandler_2, portHandler_3, portHandler_4, portHandler_5, portHandler_6, self.packetHandler = Packet_Port_Setup(self.Config_Options["baud_rate"]) # Create port handler and packet handler objects
+                portHandler_1, portHandler_2, portHandler_3, portHandler_4, portHandler_5, portHandler_6, self.packetHandler = Packet_Port_Setup(self.Config_Options["Baud-Rate"]) # Create port handler and packet handler objects
                 self.port_hand_list = [portHandler_1, portHandler_2, portHandler_3, portHandler_4, portHandler_5, portHandler_6] # Append these objects to an easy to access list
                 dxl_data_list = PingServos(self.port_hand_list,self.packetHandler) # Ping the ports to identify which servos are connected to the raspberry pi through the ports
                 self.port_servo_dict, self.port_used_dict = Port_Servo_Assign(dxl_data_list,self.port_hand_list) # Create lists detailing which servos are assigned to which ports
@@ -875,7 +918,7 @@ class MainWindow(tk.Tk):
                     self.servo_listbox.insert(tk.END,detected_servo) # Add servo to listbox next to schematic
                     self.change_servo_color(each_servo,"yellow") # Change the color of the corresponding servo graphic to yellow - detected but not designated 
                     connected_servo_list.append(each_servo) # Add each servo to the temporary variable connected_servo_list
-                self.Config_Options["connected_servos"] = connected_servo_list # Replace the settings variable with the now populated connected servo list
+                self.Config_Options["Servos-Connected"] = connected_servo_list # Replace the settings variable with the now populated connected servo list
                 if(all(item in connected_servo_list for item in F_R_ARM)): # check if all front right leg servos are connected
                     connected_limb_list.append(1) # If yes, append front right limb to connected limbs list
                 if(all(item in connected_servo_list for item in F_L_ARM)): # check if all front left leg servos are connected
@@ -890,7 +933,7 @@ class MainWindow(tk.Tk):
                     connected_limb_list.append(6) # If yes, append spine to connected limbs list
                 if(all(item in connected_servo_list for item in TAIL)): # check if all tail servos are connected
                     connected_limb_list.append(7) # If yes, append tail to connected limbs list
-                self.Config_Options["connected_limbs"] = connected_limb_list # Replace the settings variable with the now populated connected limb list
+                self.Config_Options["Limbs-Connected"] = connected_limb_list # Replace the settings variable with the now populated connected limb list
                 for each_port in self.port_used_dict.values():
                     if each_port == 0: # If port 1 is identified as being used
                         self.myCanvas.itemconfig(self.port_1_indicator,fill=self.servo_colors["green"]) # Set the port 1 indicator to green
@@ -925,10 +968,10 @@ class MainWindow(tk.Tk):
                 self.change_servo_color(selected_servo,"green") # Change the corresponding servo graphic to green - detected and designated to move
                 self.confirmed_action[1].append(selected_servo)
             if len(self.move_list) > 1:
-                self.Config_Options["servos_to_move"] = self.move_list # If there's more than one servo selected, change Config_Options variable to represent this
+                self.Config_Options["Servos-To-Move"] = self.move_list # If there's more than one servo selected, change Config_Options variable to represent this
                 self.confirmed_action[0] = 2
             else:
-                self.Config_Options["single_servo_to_move"] = self.move_list
+                self.Config_Options["Single-Servo-To-Move"] = self.move_list
                 self.confirmed_action[0] = 1
             self.stay_move_selected[0] = 1
             if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
@@ -950,23 +993,26 @@ class MainWindow(tk.Tk):
             for selected_servo in self.dont_move_list:
                 self.change_servo_color(selected_servo,"red") # Change the corresponding servo graphic to red - detected and designated to not move
             if (17 in self.dont_move_list) or (18 in self.dont_move_list): # If body length servos are selected, change Config_Options variable to represent this
-                self.Config_Options["neck_straight"] = True
+                self.Config_Options["Neck-Straight"] = True
             else:
-                self.Config_Options["neck_straight"] = False
+                self.Config_Options["Neck-Straight"] = False
             if (19 in self.dont_move_list) or (20 in self.dont_move_list) or (21 in self.dont_move_list) or (22 in self.dont_move_list):
-                self.Config_Options["spine_straight"] = True
+                self.Config_Options["Spine-Straight"] = True
             else:
-                self.Config_Options["spine_straight"] = False
+                self.Config_Options["Spine-Straight"] = False
             if (23 in self.dont_move_list) or (24 in self.dont_move_list):
-                self.Config_Options["tail_straight"] = True
+                self.Config_Options["Tail-Straight"] = True
             else:
-                self.Config_Options["tail_straight"] = False
+                self.Config_Options["Tail-Straight"] = False
             self.stay_move_selected[1] = 1
             if self.stay_move_selected[0] == 1 and self.stay_move_selected[1] == 1:
                 self.indicator_canvas.itemconfig(self.indic_oval, fill="red") # Change indicator light to red, servos are designated but the robot is not in home position
                 Step_Progressor = 3
 
     def change_servo_color(self,num_in,color_change): # Function to change the color of the corresponding servo in the schematic
+        if color_change != "blue":
+            self.servo_box_colors[num_in] = self.myCanvas.itemcget(self.servo_graphics[num_in],"fill")
+        self.servo_box_colors[num_in]=self.myCanvas.itemcget(self.servo_graphics[num_in],"fill")
         if (num_in >= 1 and num_in <= 24) and (color_change in self.servo_colors.keys()): # If the servo number entered into the function is one of the ones displayed on the schematic, and the color put into the function is one in the dictionary
             self.myCanvas.itemconfig(self.servo_graphics[num_in], fill=self.servo_colors[color_change]) # Change the corresponding servo in the schematic to the desired color
         else:
@@ -1070,9 +1116,9 @@ class MainWindow(tk.Tk):
                 for each_servo in self.confirmed_action[1]:
                     self.ServosDictionary[each_servo].InitialSetup(self.port_servo_dict[each_servo],False) # Run digital limb servos through initial setup protocol to set system variables
                     self.ServosDictionary[each_servo].ToggleTorque(1,self.port_servo_dict[each_servo]) # Turn the torque on so the servos may move on command
-                Move_Spider_Up(self, self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"],self.Config_Options["run_digital_only"]) # Move servos to spider position where the legs are raised up in the air
+                Move_Spider_Up(self, self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["Home-Speed"],self.Config_Options["Run-Digital-Only"]) # Move servos to spider position where the legs are raised up in the air
                 time.sleep(2)
-                Move_Spider_Down(self, self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["home_speed"], self.Config_Options["run_digital_only"]) # Move servos to spider position where it raises itself up off the ground
+                Move_Spider_Down(self, self.move_list, self.ServosDictionary, self.port_hand_list, self.port_servo_dict, self.packetHandler,self.Config_Options["Home-Speed"], self.Config_Options["Run-Digital-Only"]) # Move servos to spider position where it raises itself up off the ground
                 time.sleep(2)
                 for each_servo in self.confirmed_action[1]:
                     self.ServosDictionary[each_servo].MoveHome(config_array[17],self.port_servo_dict[each_servo]) # Send servos to actual starting position (first position in stride)
@@ -1099,14 +1145,14 @@ class MainWindow(tk.Tk):
             elif self.confirmed_action[0] == 2: # Move Numerous Servos
                 print("Option Move Multiple Servos Detected")
                 start_time = time.time() # Set a base time using the clock on the running computer
-                out_data = MoveNumerousServos(self,self.move_list,self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
-                    self.packetHandler,self.stride_numbers,self.record_array, start_time, self.movement_smoothing, config_array[32]) # Go through using the Continuous Move Function for the corresponding servos
+                out_data = MoveNumerousServos(self, self.move_list,self.ServosDictionary,self.port_hand_list,self.port_servo_dict,
+                    self.packetHandler,self.stride_numbers,self.record_array, start_time, self.movement_smoothing, self.pin_accuracy.get(), config_array[32]) # Go through using the Continuous Move Function for the corresponding servos
                 record_time = time.time() # Set a base End Time using the clock on the running computer
                 end_time = record_time - start_time # Calculate the amount of time that passed over the trial
                 self.act_end_time.set('{:.3f}'.format(end_time)) # Format the time difference as a string for display
                 if config_array[32] == False: # If run digital only is set to false
-                    if self.record_array[0] == True: # If recording data is set to true
-                        Write_Doc(self.record_array,out_data) # Write the data to the desired document
+                    # if self.record_array[0] == True: # If recording data is set to true
+                    Write_Doc(self.record_array,out_data,self.move_list) # Write the data to the desired document
             print("\nExit Tilibot Run - Finished With Time of: {:.3f}".format(end_time))
             print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
 
@@ -1137,77 +1183,85 @@ class MainWindow(tk.Tk):
         self.stride_numbers = (config_array[4], config_array[2],config_array[3]) # Stride amount, positions per stride, and stride time
         self.set_file_display.set(desired_load_file) # Change the display label to reflect the loaded file
         if invalidate_value == True: # If there is an error, shut the program down 
+            print("Configuration file error. Check terminal above.")
             print("Shutting Down Tilibot...")
             exit()
         else:
-            self.Config_Options["baud_rate"] = config_array[0] # Set the internal config_options dictionary relevant to the GUI equal to what's in the settings file
-            self.Config_Options["positions_file"] = config_array[1]
-            self.Config_Options["position_amount"] = config_array[2]
-            self.Config_Options["stride_time"] = config_array[3]
-            self.Config_Options["stride_amount"] = config_array[4]
-            self.Config_Options["connected_servos"] = config_array[5]
-            self.Config_Options["connected_limbs"] = config_array[6]
-            self.Config_Options["connected_sensors"] = config_array[7]
-            self.Config_Options["forelimb_stance_time"] = config_array[8]
-            self.Config_Options["forelimb_swing_time"] = config_array[9]
-            self.Config_Options["hindlimb_stance_time"] = config_array[10]
-            self.Config_Options["hindlimb_swing_time"] = config_array[11]
-            self.Config_Options["tot_ratio_time"] = config_array[12]
-            self.Config_Options["move_one_servo_act"] = config_array[13]
-            self.Config_Options["single_servo_to_move"] = config_array[14]
-            self.Config_Options["move_multi_servo_act"] = config_array[15]
-            self.Config_Options["servos_to_move"] = config_array[16]
-            self.Config_Options["home_speed"] = config_array[17]
-            self.Config_Options["out_file_name"] = config_array[18]
-            self.Config_Options["out_file_dir"] = config_array[19]
-            self.Config_Options["position_write"] = config_array[20]
-            self.Config_Options["speed_write"] = config_array[21]
-            self.Config_Options["time_write"] = config_array[22]
-            self.Config_Options["posindex_write"] = config_array[23]
-            self.Config_Options["stridecount_write"] = config_array[24]
-            self.Config_Options["current_write"] = config_array[25]
-            self.Config_Options["voltage_write"] = config_array[26]
-            self.Config_Options["temp_write"] = config_array[27]
-            self.Config_Options["neck_straight"] = config_array[28]
-            self.Config_Options["spine_straight"] = config_array[29]
-            self.Config_Options["tail_straight"] = config_array[30]
-            self.Config_Options["silence_ext_output"] = config_array[31]
-            self.Config_Options["run_digital_only"] = config_array[32]
-
+            print("Configuration file confirmed valid. Continuing...")
+            self.Config_Options["Baud-Rate"] = config_array[0] # Set the internal config_options dictionary relevant to the GUI equal to what's in the settings file
+            self.Config_Options["Position-Angle-File"] = config_array[1]
+            self.Config_Options["Positions-Per-Stride"] = config_array[2]
+            self.Config_Options["Stride-Time"] = config_array[3]
+            self.Config_Options["Stride-Amount"] = config_array[4]
+            self.Config_Options["Servos-Connected"] = config_array[5]
+            self.Config_Options["Limbs-Connected"] = config_array[6]
+            self.Config_Options["Body-Sensors-Connected"] = config_array[7]
+            self.Config_Options["Forelimb-Stance"] = config_array[8]
+            self.Config_Options["Forelimb-Swing"] = config_array[9]
+            self.Config_Options["Hindlimb-Stance"] = config_array[10]
+            self.Config_Options["Hindlimb-Swing"] = config_array[11]
+            self.Config_Options["Ratio-Time"] = config_array[12]
+            self.Config_Options["Move-Single-Servo"] = config_array[13]
+            self.Config_Options["Single-Servo-To-Move"] = config_array[14]
+            self.Config_Options["Move-Multiple-Servos"] = config_array[15]
+            self.Config_Options["Servos-To-Move"] = config_array[16]
+            self.Config_Options["Home-Speed"] = config_array[17]
+            self.Config_Options["Output-File-Name"] = config_array[18]
+            self.Config_Options["Output-File-Directory"] = config_array[19]
+            self.Config_Options["Position"] = config_array[20]
+            self.Config_Options["Speed"] = config_array[21]
+            self.Config_Options["Time"] = config_array[22]
+            self.Config_Options["Position-Index"] = config_array[23]
+            self.Config_Options["Stride-Count"] = config_array[24]
+            self.Config_Options["Current"] = config_array[25]
+            self.Config_Options["Voltage"] = config_array[26]
+            self.Config_Options["Temperature"] = config_array[27]
+            self.Config_Options["Neck-Straight"] = config_array[28]
+            self.Config_Options["Spine-Straight"] = config_array[29]
+            self.Config_Options["Tail-Straight"] = config_array[30]
+            self.Config_Options["Silence-Extraneous-Output"] = config_array[31]
+            self.Config_Options["Run-Digital-Only"] = config_array[32]
+            self.Config_Options["Pin-Accuracy"] = config_array[33]
+            self.Config_Options["Speed-Range-Shortening"] = config_array[34]
+            
             # Set existing visual fields
-            if (self.Config_Options["move_one_servo_act"] == True) and (self.Config_Options["move_multi_servo_act"] == False):
+            if (self.Config_Options["Move-Single-Servo"] == True) and (self.Config_Options["Move-Multiple-Servos"] == False):
                 self.move_select.set(0) # If only one servo is to move, set the desired movement to reflect this 
-            elif (self.Config_Options["move_multi_servo_act"] == True) and (self.Config_Options["move_one_servo_act"] == False):
+            elif (self.Config_Options["Move-Multiple-Servos"] == True) and (self.Config_Options["Move-Single-Servo"] == False):
                 self.move_select.set(1) # If multiple servos are to move, set the desired movement to reflect this
-            self.stride_time_entry_string.set(self.Config_Options["stride_time"]) # Set the stride time entry to reflect the settings input
-            self.stride_amount_entry_string.set(self.Config_Options["stride_amount"]) # Set the stride amount entry to reflect the settings input
+            self.stride_time_entry_string.set(self.Config_Options["Stride-Time"]) # Set the stride time entry to reflect the settings input
+            self.stride_amount_entry_string.set(self.Config_Options["Stride-Amount"]) # Set the stride amount entry to reflect the settings input
             if self.record_array[0] == True: # If the record settings reflect that recording data is desired, set the checkbox to be checked
                 self.record_yesno.set(1)
             else:
                 self.record_yesno.set(0)
             Step_Progressor = 5
+        ADDR_MOVING_THRESHOLD = config_array[33]
+        self.pin_accuracy.set(self.Config_Options["Pin-Accuracy"])
+        SCALING_DIFFERENCE = config_array[34]
+        self.range_shortening.set(self.Config_Options["Speed-Range-Shortening"])
             
     def load_kinem_file(self): # Function to load the kinematics file when the button is pressed
         global Step_Progressor
         if Step_Progressor < 4:
             messagebox.showerror(title="Error",message="Error - Cannot load Kinematics File. Move Settings must be set before the Kinematics file may be loaded.")
         elif Step_Progressor >= 5:
-            preprocessed_positions = ReadServoAngles(self.Config_Options["positions_file"]) # Read the angles within the file and determine the servo positions 
+            preprocessed_positions = ReadServoAngles(self.Config_Options["Position-Angle-File"]) # Read the angles within the file and determine the servo positions 
             self.PositionsMatrix = PostProcessPositions(preprocessed_positions) # Process the servo positions further to be easier to use and manipulate
-            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["stride_time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
-                self.Config_Options["position_amount"],list(self.Config_Options.values()))
+            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["Stride-Time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
+                self.Config_Options["Positions-Per-Stride"],list(self.Config_Options.values()),self.range_shortening.get())
             self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["orange"])
         elif Step_Progressor == 4:
-            self.Config_Options["positions_file"] = fdlg.askopenfilename() # Set the positions_file dictionary variable to the name of the file selected
-            self.kin_file_display.set(self.Config_Options["positions_file"]) # Change the display widget at the bottom of the window to display the name of the file selected
-            preprocessed_positions = ReadServoAngles(self.Config_Options["positions_file"]) # Read the angles within the file and determine the servo positions 
+            self.Config_Options["Position-Angle-File"] = fdlg.askopenfilename() # Set the positions_file dictionary variable to the name of the file selected
+            self.kin_file_display.set(self.Config_Options["Position-Angle-File"]) # Change the display widget at the bottom of the window to display the name of the file selected
+            preprocessed_positions = ReadServoAngles(self.Config_Options["Position-Angle-File"]) # Read the angles within the file and determine the servo positions 
             self.PositionsMatrix = PostProcessPositions(preprocessed_positions) # Process the servo positions further to be easier to use and manipulate
-            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["stride_time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
-                self.Config_Options["position_amount"],list(self.Config_Options.values()))
+            self.SpeedMatrix = DetermineSpeeds(self.Config_Options["Stride-Time"],self.PositionsMatrix, # Using the positions and the entered stride time, calculate the speeds by which the servos should move
+                self.Config_Options["Positions-Per-Stride"],list(self.Config_Options.values()))
             self.indicator_canvas.itemconfig(self.indic_oval, fill=self.servo_colors["orange"])
             Step_Progressor = 5
 
-
+    
     def analyse_data(self):
         # in_csv_data = fdlg.askopenfilename()
         # messagebox.showerror(title="Sorry!",message="Terribly sorry, this feature isn't functionally implemented yet!")
@@ -1236,7 +1290,7 @@ class MainWindow(tk.Tk):
         for servo_num in reboot_list:
             if self.port_used_dict[servo_num] == 0:
                 if self.port_hand_list[0].openPort():
-                    if self.port_hand_list[0].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[0].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 1")
                     else:
                         print("Failed to change the baudrate - 1")
@@ -1250,10 +1304,9 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
             elif self.port_used_dict[servo_num] == 1:
                 if self.port_hand_list[1].openPort():
-                    if self.port_hand_list[1].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[1].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 2")
                     else:
                         print("Failed to change the baudrate - 2")
@@ -1267,10 +1320,9 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
             elif self.port_used_dict[servo_num] == 2:
                 if self.port_hand_list[2].openPort():
-                    if self.port_hand_list[2].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[2].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 3")
                     else:
                         print("Failed to change the baudrate - 3")
@@ -1284,10 +1336,9 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
             elif self.port_used_dict[servo_num] == 3:
                 if self.port_hand_list[3].openPort():
-                    if self.port_hand_list[3].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[3].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 4")
                     else:
                         print("Failed to change the baudrate - 4")
@@ -1301,10 +1352,9 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
             elif self.port_used_dict[servo_num] == 4:
                 if self.port_hand_list[4].openPort():
-                    if self.port_hand_list[4].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[4].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 5")
                     else:
                         print("Failed to change the baudrate - 5")
@@ -1318,10 +1368,9 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
             elif self.port_used_dict[servo_num] == 5:
                 if self.port_hand_list[5].openPort():
-                    if self.port_hand_list[5].setBaudRate(self.Config_Options["baud_rate"]):
+                    if self.port_hand_list[5].setBaudRate(self.Config_Options["Baud-Rate"]):
                         print("Succeeded to change the baudrate for port 6")
                     else:
                         print("Failed to change the baudrate - 6")
@@ -1335,7 +1384,7 @@ class MainWindow(tk.Tk):
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
                 print("[ID:%03d] reboot Succeeded\n" % servo_num)
-                self.change_servo_color(servo_num,"green")
+        self.change_servo_color(servo_num,self.servo_box_colors[servo_num])
         self.reboot_ind_canvas.itemconfig(self.reb_indic_oval, fill=self.servo_colors["green"])
         
 
@@ -1445,8 +1494,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[0].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[0].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                 time.sleep(0.2)
@@ -1482,8 +1531,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[1].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[1].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                     print("Press any key to terminate...")
@@ -1520,8 +1569,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[2].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[2].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                     print("Press any key to terminate...")
@@ -1557,8 +1606,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[3].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[3].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                     print("Press any key to terminate...")
@@ -1594,8 +1643,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[4].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[4].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                     print("Press any key to terminate...")
@@ -1631,8 +1680,8 @@ class MainWindow(tk.Tk):
                 else:
                     print("[ID:%03d] Set Dynamixel baudnum to : %d" % (servo_num, NEW_BAUDNUM))
                 # Set port baudrate to BAUDRATE
-                if self.port_hand_list[5].setBaudRate(self.Config_Options["baud_rate"]):
-                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["baud_rate"])
+                if self.port_hand_list[5].setBaudRate(self.Config_Options["Baud-Rate"]):
+                    print("Succeeded to change the controller baudrate to : %d" % self.Config_Options["Baud-Rate"])
                 else:
                     print("Failed to change the controller baudrate")
                     print("Press any key to terminate...")

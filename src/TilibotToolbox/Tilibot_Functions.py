@@ -14,7 +14,7 @@ import sys
 import csv
 import math
 
-tryMeSwitch = False
+ErrorSwitch = True # Change to false to get rid of position checking
 
 if os.name == 'nt': # nt for windows, posix for mac and linux, Defines getch for user control, makes hitting enter to continue possible
     import msvcrt   
@@ -68,13 +68,16 @@ def read_config_file(Config_Yaml_File): # Read the configuration yaml file and e
         tail_straight = config_data['Tail-Straight']                    #30      Read in if you want to keep the tail straight or move according to instructions
         silence_ext_ouput = config_data['Silence-Extraneous-Output']    #31      Read in if you want to silence extraneous outputs
         run_digital_only = config_data['Run-Digital-Only']              #32      Read in if you want to run this program digitally without a physical body
+        pin_accuracy = config_data['Pin-Accuracy']                      #33      Read in the accuracy threshold for pin movement for each servo
+        speed_range_shortening = config_data['Speed-Range-Shortening']  #34      Read in the amount the speed range should be shortened by on each side
+
 
     config_array = [baudrate, positions_file, position_amount, stride_time, stride_amount,                      # Assemble output array of all field options for return
     connected_servos, connected_limbs, connected_sensors, forelimb_stance_time, forelimb_swing_time, hindlimb_stance_time,
     hindlimb_swing_time, stance_swing_ratio_time, move_one_servo_act, single_servo_to_move, move_multi_servo_act, 
     servos_to_move, home_speed, out_file_name, out_file_dir, position_write, speed_write, time_write, 
     posindex_write, stridecount_write, current_write, voltage_write, temp_write, neck_straight, spine_straight,
-    tail_straight, silence_ext_ouput, run_digital_only]
+    tail_straight, silence_ext_ouput, run_digital_only, pin_accuracy, speed_range_shortening]
 
     return config_array
 
@@ -204,6 +207,12 @@ def check_config_file(config_array,GUI_or_TERMINAL):
         invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     elif (not isinstance(config_array[32],bool)): # Check if Run Digital Only is proper boolean
         print("Run-Digital-Only is not a valid Boolean. Please fix and try again.")
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
+    elif (not isinstance(config_array[33],int)): # Check if Pin Accuracy is a proper integer
+        print("Pin-Accuracy is not a valid Integer. Please fix and try again.")
+        invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
+    elif (not isinstance(config_array[34],int)): # Check if Speed Range Shortening is a proper integer
+        print("Speed-Range-Shortening is not a valid Integer. Please fix and try again.")
         invalidate_value = True # If this is not the case, change the indicator value to reflect there is a problem
     if GUI_or_TERMINAL == -1: # If being used through the GUI, do not check if servos have already been established, the GUI will do this for you after detecting
         pass
@@ -544,7 +553,7 @@ def ScaleSpeedValue(scalingDiff, oldValue):
     adjustedSpeedVal = (((oldValue - minSpeed) * newRange) / oldRange) + newLowerLimit
     return adjustedSpeedVal
 
-def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
+def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array,range_short):
     #Make a copy of the dataframe with the same dimensions for the speeds
     speeds = cp.copy(PositionsMatrix)
     h_stance = config_array[10]
@@ -571,6 +580,7 @@ def DetermineSpeeds(tspan,PositionsMatrix,points_per_stride,config_array):
     MoveIndex = np.linspace(1,int(cLength),int(cLength))
     servos = list(range(1,cWidth+1))
     MoveIndex = MoveIndex.astype(int).tolist()
+    SCALING_DIFFERENCE = range_short
     newSpeeds = []
     #t1 = np.zeros(b[1])
     for i in np.linspace(1,cWidth,cWidth):
@@ -1025,12 +1035,13 @@ def createDataMat(inMat,inServ,inNum,inPos):
     inMat[inPos][inServ] = inNum
     return inMat
 
-def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time, move_smooth, DigitalOnly):
+def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list, port_servo_dict, packetHandler, stride_numbers, record_array, start_time, move_smooth, pin_accuracy,DigitalOnly):
     if DigitalOnly == True:
         pass
     elif DigitalOnly == False:
         ports_used = [0, 0, 0, 0, 0, 0]
 
+        MOVING_THRESHOLD_ACCURACY = pin_accuracy
         print('Servo list: {0}\n'.format(servo_list))
         # print('Servo Dictionary: {0}'.format(ServosDictionary))
         print('Stride Numbers -> Stride Amount: {0}, Number of Moves: {1}, Time in seconds per stride: {2}\n'.format(stride_numbers[0],stride_numbers[1],stride_numbers[2]))
@@ -1122,6 +1133,9 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
         port_4_list = []
         port_5_count = 0
         port_5_list = []
+        ServoOutData = {}
+        CategoryLocation={}
+
         for each_servo in servo_list:
             if (ServosDictionary[each_servo].port_used == 0):
                 port_0_count += 1
@@ -1141,12 +1155,43 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
             elif (ServosDictionary[each_servo].port_used == 5):
                 port_5_count += 1
                 port_5_list.append(each_servo)
+            CategoryLocationIndex = 0
+            if record_array[0] == True:
+                CategoryLocation = {'Target Position':0}
+                # CategoryLocationIndex = 0
+                record_length = 1
+                if record_array[1] == True:
+                    CategoryLocation['Actual Position'] = record_length
+                    record_length += 1
+                if record_array[2] == True:
+                    CategoryLocation['Speed'] = record_length
+                    record_length += 1
+                if record_array[3] == True:
+                    CategoryLocation['Time'] = record_length
+                    record_length += 1
+                if record_array[4] == True:
+                    CategoryLocation['Position Index'] = record_length
+                    record_length += 1
+                if record_array[5] == True:
+                    CategoryLocation['Stride Count'] = record_length
+                    record_length += 1
+                if record_array[6] == True:
+                    CategoryLocation['Current'] = record_length
+                    record_length += 1
+                if record_array[7] == True:
+                    CategoryLocation['Voltage'] = record_length
+                    record_length += 1
+                if record_array[8] == True:
+                    CategoryLocation['Temperature'] = record_length
+                    record_length += 1
+                ServoOutData[each_servo] = [[0 for i in range(record_length)] for j in range(stride_numbers[1]*stride_numbers[0])]
+                ServoInstanceData = [[0 for i in range(record_length)] for j in range(length(servo_list))]
             
             print("[ID:{0}] - Velocities: {1}".format(each_servo,ServosDictionary[each_servo].Speeds))
             print("[ID:{0}] - Positions: {1}".format(each_servo,ServosDictionary[each_servo].Positions))
             print("----------------------------------------------------")
         
-        out_data = []
+        # out_data = []
         readers_exist = False
 
         # Removable Testing
@@ -1599,7 +1644,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                 commTime = timeDiff_2-timeDiff_1
                 print("Communication time: {0}".format(commTime))
                 timeAllotted = timePerMove + commTime
-
+                
                 while 1:
                     # Syncread Moving Value, Hardware Error Value, and Position Value
                     if ports_used[0] == 1:
@@ -1675,7 +1720,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                         # [i for i in ServosDictionary.keys() if i in LIMBS_ONLY]
                         # Get Error Code if Present. Change color on schematic if present.
                         # Get Dynamixel present Moving value
-                        if tryMeSwitch == False:
+                        if ErrorSwitch == False:
                             prev_pos = (ServosDictionary[each_servo].Positions[position_index-1] if position_index != 0 else ServosDictionary[each_servo].Positions[-1])
                             if (each_servo in port_0_list) and (each_servo in LIMBS_ONLY):
                                 dxl_error = groupSyncRead_Error_1.getData(each_servo, AddrDict[26],1)
@@ -1688,6 +1733,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_1.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_0[index_1] = 1
@@ -1756,6 +1802,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_2.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_1[index_2] = 1
@@ -1823,6 +1870,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_3.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_2[index_3] = 1
@@ -1890,6 +1938,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_4.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_4.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_3[index_4] = 1
@@ -1957,6 +2006,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_5.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_5.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_4[index_5] = 1
@@ -2024,6 +2074,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_6.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_6.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_5[index_6] = 1
@@ -2094,6 +2145,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_1.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_1.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_0[index_1] = 1
@@ -2248,6 +2300,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_2.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_2.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_1[index_2] = 1
@@ -2400,6 +2453,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_3.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_3.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_2[index_3] = 1
@@ -2552,6 +2606,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_4.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_4.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_3[index_4] = 1
@@ -2704,6 +2759,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_5.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_5.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_4[index_5] = 1
@@ -2856,6 +2912,7 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                     ServosDictionary[each_servo].error_present = True
                                 dxl_mov = groupSyncRead_Moving_6.getData(each_servo, AddrDict[39],1)
                                 dxl_pos = groupSyncRead_Position_6.getData(each_servo, AddrDict[44],4)
+                                CURRENT_POSITIONS[each_servo] = dxl_pos
                                 print("Servo #{0} / Position Right Now: {1} / Original Goal Position Sent: {2}".format(each_servo,dxl_pos,Original_GoalPosition[servIndex]))
                                 if (ServosDictionary[each_servo].error_present == True):
                                     isStopped_5[index_6] = 1
@@ -3157,22 +3214,22 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                             groupSyncRead_Temperature_5.addParam(each_servo)
                                         if ports_used[5] == 1:
                                             groupSyncRead_Temperature_6.addParam(each_servo)
-                            if readers_exist == True:
                                 if record_array[6] == True:
                                     if ports_used[0] == 1:
                                         # Syncread present current
                                         dxl_comm_result = groupSyncRead_Current_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_1.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_1.isAvailable(port_0_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_1_Current.append(groupSyncRead_Current_1.getData(each_front_servo, AddrDict[42], 2))
+                                                # port_1_Current.append(groupSyncRead_Current_1.getData(port_0_servo, AddrDict[42], 2))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_1.getData(port_0_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3180,15 +3237,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_2.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_2.isAvailable(port_1_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_2_Current.append(groupSyncRead_Current_2.getData(each_back_servo, AddrDict[42], 2))
+                                                # port_2_Current.append(groupSyncRead_Current_2.getData(port_1_servo, AddrDict[42], 2))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_2.getData(port_1_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3196,15 +3254,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_3.isAvailable(each_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_3.isAvailable(port_2_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_3_Current.append(groupSyncRead_Current_3.getData(each_servo, AddrDict[42], 2))
+                                                # port_3_Current.append(groupSyncRead_Current_3.getData(port_2_servo, AddrDict[42], 2))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_3.getData(port_2_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_3.clearParam()
                                     if ports_used[3] == 1:
@@ -3212,15 +3271,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_4.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_3_list:
-                                            if each_front_servo in servo_list:
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_4.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_4.isAvailable(port_3_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_4_Current.append(groupSyncRead_Current_4.getData(each_front_servo, AddrDict[42], 2))
+                                                # port_4_Current.append(groupSyncRead_Current_4.getData(port_3_servo, AddrDict[42], 2))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_4.getData(port_3_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_4.clearParam()
                                     if ports_used[4] == 1:
@@ -3228,15 +3288,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_5.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_4_list:
-                                            if each_back_servo in servo_list:
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_5.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_5.isAvailable(port_4_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_5_Current.append(groupSyncRead_Current_5.getData(each_back_servo, AddrDict[42], 2))
+                                                # port_5_Current.append(groupSyncRead_Current_5.getData(port_4_servo, AddrDict[42], 2))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_5.getData(port_4_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_5.clearParam()
                                     if ports_used[5] == 1:
@@ -3244,15 +3305,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_6.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_5_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_6.isAvailable(each_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_6.isAvailable(port_5_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_6_Current.append(groupSyncRead_Current_6.getData(each_servo, AddrDict[42], 2))
+                                                # port_6_Current.append(groupSyncRead_Current_6.getData(port_5_servo, AddrDict[42], 2))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_6.getData(port_5_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_6.clearParam()
                                 if record_array[7] == True:
@@ -3261,15 +3323,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(each_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(port_0_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_1_Voltage.append(groupSyncRead_Voltage_1.getData(each_servo, AddrDict[47], 2))
+                                                # port_1_Voltage.append(groupSyncRead_Voltage_1.getData(port_0_servo, AddrDict[47], 2))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_1.getData(port_0_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3277,15 +3340,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(each_back_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(port_1_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_2_Voltage.append(groupSyncRead_Voltage_2.getData(each_back_servo, AddrDict[47], 2))
+                                                # port_2_Voltage.append(groupSyncRead_Voltage_2.getData(port_1_servo, AddrDict[47], 2))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_2.getData(port_1_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Voltage_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3293,32 +3357,85 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(each_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(port_2_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_3_Voltage.append(groupSyncRead_Voltage_3.getData(each_servo, AddrDict[47], 2))
+                                                # port_3_Voltage.append(groupSyncRead_Voltage_3.getData(port_2_servo, AddrDict[47], 2))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_3.getData(port_2_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Voltage_3.clearParam()
+                                    if ports_used[3] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_4.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_4.isAvailable(port_3_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_4_Voltage.append(groupSyncRead_Voltage_4.getData(port_3_servo, AddrDict[47], 2))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_4.getData(port_3_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_4.clearParam()
+                                    if ports_used[4] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_5.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_5.isAvailable(port_4_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_5_Voltage.append(groupSyncRead_Voltage_5.getData(port_4_servo, AddrDict[47], 2))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_5.getData(port_4_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_2.clearParam()
+                                    if ports_used[5] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_6.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_6.isAvailable(port_5_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_6_Voltage.append(groupSyncRead_Voltage_6.getData(port_5_servo, AddrDict[47], 2))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_6.getData(port_5_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_6.clearParam()
                                 if record_array[8] == True:
                                     if ports_used[0] == 1:
                                         # Syncread present temperature
                                         dxl_comm_result = groupSyncRead_Temperature_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(port_0_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_1_Temperature.append(groupSyncRead_Temperature_1.getData(each_servo, AddrDict[48], 1))
+                                                # port_1_Temperature.append(groupSyncRead_Temperature_1.getData(port_0_servo, AddrDict[48], 1))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_1.getData(port_0_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3326,15 +3443,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(port_1_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_2_Temperature.append(groupSyncRead_Temperature_2.getData(each_servo, AddrDict[48], 1))
+                                                # port_2_Temperature.append(groupSyncRead_Temperature_2.getData(port_1_servo, AddrDict[48], 1))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_2.getData(port_1_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3342,15 +3460,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(port_2_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_3_Temperature.append(groupSyncRead_Temperature_3.getData(each_servo, AddrDict[48], 1))
+                                                # port_3_Temperature.append(groupSyncRead_Temperature_3.getData(port_2_servo, AddrDict[48], 1))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_3.getData(port_2_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_3.clearParam()
                                     if ports_used[3] == 1:
@@ -3358,15 +3477,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_4.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_3_list:
-                                            if each_front_servo in servo_list:
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_4.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_4.isAvailable(port_3_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_4_Temperature.append(groupSyncRead_Temperature_4.getData(each_servo, AddrDict[48], 1))
+                                                # port_4_Temperature.append(groupSyncRead_Temperature_4.getData(port_3_servo, AddrDict[48], 1))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_4.getData(port_3_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_4.clearParam()
                                     if ports_used[4] == 1:
@@ -3374,15 +3494,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_5.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_4_list:
-                                            if each_back_servo in servo_list:
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_5.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_5.isAvailable(port_4_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_5_Temperature.append(groupSyncRead_Temperature_5.getData(each_servo, AddrDict[48], 1))
+                                                # port_5_Temperature.append(groupSyncRead_Temperature_5.getData(port_4_servo, AddrDict[48], 1))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_5.getData(port_4_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_5.clearParam()
                                     if ports_used[5] == 1:
@@ -3390,123 +3511,52 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_6.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_5_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_6.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_6.isAvailable(port_5_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_6_Temperature.append(groupSyncRead_Temperature_6.getData(each_servo, AddrDict[48], 1))
+                                                # port_6_Temperature.append(groupSyncRead_Temperature_6.getData(port_5_servo, AddrDict[48], 1))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_6.getData(port_5_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_6.clearParam()
-                            if readers_exist == True:
                                 for list_index,each_servo in enumerate(servo_list):
-                                    servo_data_array = [each_servo]
+                                    servo_data_array = []
+                                    target_pos = ServosDictionary[each_servo].Positions[position_index]
+                                    ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Target Position']] = target_pos
+                                    # servo_data_array.append(target_pos)
                                     if record_array[1] == True:
-                                        pos_out = ServosDictionary[each_servo].Positions[position_index]
-                                        servo_data_array.append(pos_out)
                                         # Record Position / self.Positions[stride_count]
+                                        pos_out = CURRENT_POSITIONS[each_servo]
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Actual Position']] = pos_out
+                                        # servo_data_array.append(pos_out)
                                     if record_array[2] == True:
                                         vel_out = ServosDictionary[each_servo].Speeds[stride_count]
-                                        servo_data_array.append(vel_out)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Speed']] = vel_out
+                                        # servo_data_array.append(vel_out)
                                         # Record Speed / self.Speeds[stride_count]
                                     if record_array[3] == True:
                                         record_time = time.time()
                                         end_time = record_time - start_time
-                                        servo_data_array.append(end_time)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Time']] = end_time
+                                        # servo_data_array.append(end_time)
                                         # Record Time / record_time - start_time
                                     if record_array[4] == True:
                                         pos_count = position_index
-                                        servo_data_array.append(pos_count)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Position Index']] = pos_count
+                                        # servo_data_array.append(pos_count)
                                         # Record Position Index / position_count
                                     if record_array[5] == True:
                                         strd_count = stride_count
-                                        servo_data_array.append(strd_count)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Stride Count']] = vel_out
+                                        # servo_data_array.append(strd_count)
                                         # Record Stride Count / stride_count
-                                    if record_array[6] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_current = port_1_Current[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_current = port_2_Current[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_current = port_3_Current[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_current = port_4_Current[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_current = port_5_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_current = port_6_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_current)
-                                    if record_array[7] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_voltage = port_1_Voltage[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_voltage = port_2_Voltage[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_voltage = port_3_Voltage[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_voltage = port_4_Voltage[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_voltage = port_5_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_voltage = port_6_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_voltage)
-                                    if record_array[8] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_temp = port_1_Temperature[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_temp = port_2_Temperature[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_temp = port_3_Temperature[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_temp = port_4_Temperature[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_temp = port_5_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_temp = port_6_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_temp)
-                                    out_data.append(servo_data_array)
-                            if record_array[6] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Current = []
-                                if ports_used[1] == 1:
-                                    port_2_Current = []
-                                if ports_used[2] == 1:
-                                    port_3_Current = []
-                                if ports_used[3] == 1:
-                                    port_4_Current = []
-                                if ports_used[4] == 1:
-                                    port_5_Current = []
-                                if ports_used[5] == 1:
-                                    port_6_Current = []
-                            if record_array[7] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Voltage = []
-                                if ports_used[1] == 1:
-                                    port_2_Voltage = []
-                                if ports_used[2] == 1:
-                                    port_3_Voltage = []
-                                if ports_used[3] == 1:
-                                    port_4_Voltage = []
-                                if ports_used[4] == 1:
-                                    port_5_Voltage = []
-                                if ports_used[5] == 1:
-                                    port_6_Voltage = []
-                            if record_array[8] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Temperature = []
-                                if ports_used[1] == 1:
-                                    port_2_Temperature = []
-                                if ports_used[2] == 1:
-                                    port_3_Temperature = []
-                                if ports_used[3] == 1:
-                                    port_4_Temperature = []
-                                if ports_used[4] == 1:
-                                    port_5_Temperature = []
-                                if ports_used[5] == 1:
-                                    port_6_Temperature = []
+                                    
+                                    # ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index]
+                                    # out_data.append(servo_data_array)
                         # print("Clearing Goal Velocities and Positions: Bottom")
                         GoalVelocity = []
                         GoalPosition = []
@@ -3671,22 +3721,22 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                             groupSyncRead_Temperature_5.addParam(each_servo)
                                         if ports_used[5] == 1:
                                             groupSyncRead_Temperature_6.addParam(each_servo)
-                            if readers_exist == True:
                                 if record_array[6] == True:
                                     if ports_used[0] == 1:
                                         # Syncread present current
                                         dxl_comm_result = groupSyncRead_Current_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_1.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_1.isAvailable(port_0_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_1_Current.append(groupSyncRead_Current_1.getData(each_front_servo, AddrDict[42], 2))
+                                                # port_1_Current.append(groupSyncRead_Current_1.getData(port_0_servo, AddrDict[42], 2))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_1.getData(port_0_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3694,15 +3744,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_2.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_2.isAvailable(port_1_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_2_Current.append(groupSyncRead_Current_2.getData(each_back_servo, AddrDict[42], 2))
+                                                # port_2_Current.append(groupSyncRead_Current_2.getData(port_1_servo, AddrDict[42], 2))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_2.getData(port_1_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3710,15 +3761,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_3.isAvailable(each_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_3.isAvailable(port_2_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_3_Current.append(groupSyncRead_Current_3.getData(each_servo, AddrDict[42], 2))
+                                                # port_3_Current.append(groupSyncRead_Current_3.getData(port_2_servo, AddrDict[42], 2))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_3.getData(port_2_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_3.clearParam()
                                     if ports_used[3] == 1:
@@ -3726,15 +3778,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_4.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_3_list:
-                                            if each_front_servo in servo_list:
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_4.isAvailable(each_front_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_4.isAvailable(port_3_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_front_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_4_Current.append(groupSyncRead_Current_4.getData(each_front_servo, AddrDict[42], 2))
+                                                # port_4_Current.append(groupSyncRead_Current_4.getData(port_3_servo, AddrDict[42], 2))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_4.getData(port_3_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_4.clearParam()
                                     if ports_used[4] == 1:
@@ -3742,15 +3795,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_5.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_4_list:
-                                            if each_back_servo in servo_list:
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_5.isAvailable(each_back_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_5.isAvailable(port_4_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_5_Current.append(groupSyncRead_Current_5.getData(each_back_servo, AddrDict[42], 2))
+                                                # port_5_Current.append(groupSyncRead_Current_5.getData(port_4_servo, AddrDict[42], 2))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_5.getData(port_4_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_5.clearParam()
                                     if ports_used[5] == 1:
@@ -3758,15 +3812,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Current_6.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_5_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Current_6.isAvailable(each_servo, AddrDict[42], 2)
+                                                dxl_getdata_result = groupSyncRead_Current_6.isAvailable(port_5_servo, AddrDict[42], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
                                                     quit()
                                                 # Get Dynamixel present current value
-                                                port_6_Current.append(groupSyncRead_Current_6.getData(each_servo, AddrDict[42], 2))
+                                                # port_6_Current.append(groupSyncRead_Current_6.getData(port_5_servo, AddrDict[42], 2))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Current']] = groupSyncRead_Current_6.getData(port_5_servo, AddrDict[42], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_6.clearParam()
                                 if record_array[7] == True:
@@ -3775,15 +3830,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(each_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_1.isAvailable(port_0_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_1_Voltage.append(groupSyncRead_Voltage_1.getData(each_servo, AddrDict[47], 2))
+                                                # port_1_Voltage.append(groupSyncRead_Voltage_1.getData(port_0_servo, AddrDict[47], 2))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_1.getData(port_0_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Current_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3791,15 +3847,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(each_back_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_2.isAvailable(port_1_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_back_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_2_Voltage.append(groupSyncRead_Voltage_2.getData(each_back_servo, AddrDict[47], 2))
+                                                # port_2_Voltage.append(groupSyncRead_Voltage_2.getData(port_1_servo, AddrDict[47], 2))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_2.getData(port_1_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Voltage_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3807,32 +3864,85 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Voltage_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(each_servo, AddrDict[47], 2)
+                                                dxl_getdata_result = groupSyncRead_Voltage_3.isAvailable(port_2_servo, AddrDict[47], 2)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present voltage value
-                                                port_3_Voltage.append(groupSyncRead_Voltage_3.getData(each_servo, AddrDict[47], 2))
+                                                # port_3_Voltage.append(groupSyncRead_Voltage_3.getData(port_2_servo, AddrDict[47], 2))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_3.getData(port_2_servo, AddrDict[47], 2)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Voltage_3.clearParam()
+                                    if ports_used[3] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_4.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_4.isAvailable(port_3_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_4_Voltage.append(groupSyncRead_Voltage_4.getData(port_3_servo, AddrDict[47], 2))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_4.getData(port_3_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_4.clearParam()
+                                    if ports_used[4] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_5.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_5.isAvailable(port_4_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_5_Voltage.append(groupSyncRead_Voltage_5.getData(port_4_servo, AddrDict[47], 2))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_5.getData(port_4_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_2.clearParam()
+                                    if ports_used[5] == 1:
+                                        # Syncread present voltage
+                                        dxl_comm_result = groupSyncRead_Voltage_6.txRxPacket()
+                                        if dxl_comm_result != COMM_SUCCESS:
+                                            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
+                                                # Check if groupsyncread data of Dynamixel is available
+                                                dxl_getdata_result = groupSyncRead_Voltage_6.isAvailable(port_5_servo, AddrDict[47], 2)
+                                                if dxl_getdata_result != True:
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
+                                                    quit()
+                                                # Get Dynamixel present voltage value
+                                                # port_6_Voltage.append(groupSyncRead_Voltage_6.getData(port_5_servo, AddrDict[47], 2))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Voltage']] = groupSyncRead_Voltage_6.getData(port_5_servo, AddrDict[47], 2)
+                                        # Clear syncread parameter storage
+                                        groupSyncRead_Voltage_6.clearParam()
                                 if record_array[8] == True:
                                     if ports_used[0] == 1:
                                         # Syncread present temperature
                                         dxl_comm_result = groupSyncRead_Temperature_1.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_0_list:
-                                            if each_front_servo in servo_list:
+                                        for port_0_servo in port_0_list:
+                                            if port_0_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_1.isAvailable(port_0_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_0_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_1_Temperature.append(groupSyncRead_Temperature_1.getData(each_servo, AddrDict[48], 1))
+                                                # port_1_Temperature.append(groupSyncRead_Temperature_1.getData(port_0_servo, AddrDict[48], 1))
+                                                ServoOutData[port_0_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_1.getData(port_0_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_1.clearParam()
                                     if ports_used[1] == 1:
@@ -3840,15 +3950,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_2.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_1_list:
-                                            if each_back_servo in servo_list:
+                                        for port_1_servo in port_1_list:
+                                            if port_1_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_2.isAvailable(port_1_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_1_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_2_Temperature.append(groupSyncRead_Temperature_2.getData(each_servo, AddrDict[48], 1))
+                                                # port_2_Temperature.append(groupSyncRead_Temperature_2.getData(port_1_servo, AddrDict[48], 1))
+                                                ServoOutData[port_1_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_2.getData(port_1_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_2.clearParam()
                                     if ports_used[2] == 1:
@@ -3856,15 +3967,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_3.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_2_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_2_servo in port_2_list:
+                                            if port_2_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_3.isAvailable(port_2_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_2_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_3_Temperature.append(groupSyncRead_Temperature_3.getData(each_servo, AddrDict[48], 1))
+                                                # port_3_Temperature.append(groupSyncRead_Temperature_3.getData(port_2_servo, AddrDict[48], 1))
+                                                ServoOutData[port_2_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_3.getData(port_2_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_3.clearParam()
                                     if ports_used[3] == 1:
@@ -3872,15 +3984,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_4.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_front_servo in port_3_list:
-                                            if each_front_servo in servo_list:
+                                        for port_3_servo in port_3_list:
+                                            if port_3_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_4.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_4.isAvailable(port_3_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_3_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_4_Temperature.append(groupSyncRead_Temperature_4.getData(each_servo, AddrDict[48], 1))
+                                                # port_4_Temperature.append(groupSyncRead_Temperature_4.getData(port_3_servo, AddrDict[48], 1))
+                                                ServoOutData[port_3_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_4.getData(port_3_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_4.clearParam()
                                     if ports_used[4] == 1:
@@ -3888,15 +4001,16 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_5.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_back_servo in port_4_list:
-                                            if each_back_servo in servo_list:
+                                        for port_4_servo in port_4_list:
+                                            if port_4_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_5.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_5.isAvailable(port_4_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_4_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_5_Temperature.append(groupSyncRead_Temperature_5.getData(each_servo, AddrDict[48], 1))
+                                                # port_5_Temperature.append(groupSyncRead_Temperature_5.getData(port_4_servo, AddrDict[48], 1))
+                                                ServoOutData[port_4_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_5.getData(port_4_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_5.clearParam()
                                     if ports_used[5] == 1:
@@ -3904,123 +4018,52 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
                                         dxl_comm_result = groupSyncRead_Temperature_6.txRxPacket()
                                         if dxl_comm_result != COMM_SUCCESS:
                                             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-                                        for each_bodyln_servo in port_5_list:
-                                            if each_bodyln_servo in servo_list:
+                                        for port_5_servo in port_5_list:
+                                            if port_5_servo in servo_list:
                                                 # Check if groupsyncread data of Dynamixel is available
-                                                dxl_getdata_result = groupSyncRead_Temperature_6.isAvailable(each_servo, AddrDict[48], 1)
+                                                dxl_getdata_result = groupSyncRead_Temperature_6.isAvailable(port_5_servo, AddrDict[48], 1)
                                                 if dxl_getdata_result != True:
-                                                    print("[ID:%03d] groupSyncRead getdata failed" % each_servo)
+                                                    print("[ID:%03d] groupSyncRead getdata failed" % port_5_servo)
                                                     quit()
                                                 # Get Dynamixel present temperature value
-                                                port_6_Temperature.append(groupSyncRead_Temperature_6.getData(each_servo, AddrDict[48], 1))
+                                                # port_6_Temperature.append(groupSyncRead_Temperature_6.getData(port_5_servo, AddrDict[48], 1))
+                                                ServoOutData[port_5_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Temperature']] = groupSyncRead_Temperature_6.getData(port_5_servo, AddrDict[48], 1)
                                         # Clear syncread parameter storage
                                         groupSyncRead_Temperature_6.clearParam()
-                            if readers_exist == True:
                                 for list_index,each_servo in enumerate(servo_list):
-                                    servo_data_array = [each_servo]
+                                    servo_data_array = []
+                                    target_pos = ServosDictionary[each_servo].Positions[position_index]
+                                    ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Target Position']] = target_pos
+                                    # servo_data_array.append(target_pos)
                                     if record_array[1] == True:
-                                        pos_out = ServosDictionary[each_servo].Positions[position_index]
-                                        servo_data_array.append(pos_out)
                                         # Record Position / self.Positions[stride_count]
+                                        pos_out = CURRENT_POSITIONS[each_servo]
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Actual Position']] = pos_out
+                                        # servo_data_array.append(pos_out)
                                     if record_array[2] == True:
                                         vel_out = ServosDictionary[each_servo].Speeds[stride_count]
-                                        servo_data_array.append(vel_out)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Speed']] = vel_out
+                                        # servo_data_array.append(vel_out)
                                         # Record Speed / self.Speeds[stride_count]
                                     if record_array[3] == True:
                                         record_time = time.time()
                                         end_time = record_time - start_time
-                                        servo_data_array.append(end_time)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Time']] = end_time
+                                        # servo_data_array.append(end_time)
                                         # Record Time / record_time - start_time
                                     if record_array[4] == True:
                                         pos_count = position_index
-                                        servo_data_array.append(pos_count)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Position Index']] = pos_count
+                                        # servo_data_array.append(pos_count)
                                         # Record Position Index / position_count
                                     if record_array[5] == True:
                                         strd_count = stride_count
-                                        servo_data_array.append(strd_count)
+                                        ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index][CategoryLocation['Stride Count']] = vel_out
+                                        # servo_data_array.append(strd_count)
                                         # Record Stride Count / stride_count
-                                    if record_array[6] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_current = port_1_Current[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_current = port_2_Current[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_current = port_3_Current[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_current = port_4_Current[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_current = port_5_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_current = port_6_Current[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_current)
-                                    if record_array[7] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_voltage = port_1_Voltage[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_voltage = port_2_Voltage[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_voltage = port_3_Voltage[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_voltage = port_4_Voltage[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_voltage = port_5_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_voltage = port_6_Voltage[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_voltage)
-                                    if record_array[8] == True:
-                                        if each_servo in port_0_list:
-                                            dxl_temp = port_1_Temperature[list_index]
-                                        elif each_servo in port_1_list:
-                                            dxl_temp = port_2_Temperature[list_index-(port_0_count)]
-                                        elif each_servo in port_2_list:
-                                            dxl_temp = port_3_Temperature[list_index-(port_0_count+port_1_count)]
-                                        elif each_servo in port_3_list:
-                                            dxl_temp = port_4_Temperature[list_index-(port_0_count+port_1_count+port_2_count)]
-                                        elif each_servo in port_4_list:
-                                            dxl_temp = port_5_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count)]
-                                        elif each_servo in port_5_list:
-                                            dxl_temp = port_6_Temperature[list_index-(port_0_count+port_1_count+port_2_count+port_3_count+port_4_count)]
-                                        servo_data_array.append(dxl_temp)
-                                    out_data.append(servo_data_array)
-                            if record_array[6] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Current = []
-                                if ports_used[1] == 1:
-                                    port_2_Current = []
-                                if ports_used[2] == 1:
-                                    port_3_Current = []
-                                if ports_used[3] == 1:
-                                    port_4_Current = []
-                                if ports_used[4] == 1:
-                                    port_5_Current = []
-                                if ports_used[5] == 1:
-                                    port_6_Current = []
-                            if record_array[7] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Voltage = []
-                                if ports_used[1] == 1:
-                                    port_2_Voltage = []
-                                if ports_used[2] == 1:
-                                    port_3_Voltage = []
-                                if ports_used[3] == 1:
-                                    port_4_Voltage = []
-                                if ports_used[4] == 1:
-                                    port_5_Voltage = []
-                                if ports_used[5] == 1:
-                                    port_6_Voltage = []
-                            if record_array[8] == True:
-                                if ports_used[0] == 1:
-                                    port_1_Temperature = []
-                                if ports_used[1] == 1:
-                                    port_2_Temperature = []
-                                if ports_used[2] == 1:
-                                    port_3_Temperature = []
-                                if ports_used[3] == 1:
-                                    port_4_Temperature = []
-                                if ports_used[4] == 1:
-                                    port_5_Temperature = []
-                                if ports_used[5] == 1:
-                                    port_6_Temperature = []
+                                    
+                                    # ServoOutData[each_servo][(stride_count *  stride_numbers[1]) + position_index]
+                                    # out_data.append(servo_data_array)
                         # print("Clearing Goal Velocities and Positions: Bottom")
                         GoalVelocity = []
                         GoalPosition = []
@@ -4032,36 +4075,37 @@ def MoveNumerousServos(TilibotGUI, servo_list, ServosDictionary, port_hand_list,
     analyseMeDF.columns = headerNames
     expectedNumsDF = pd.DataFrame(np.array(actualNums))
     expectedNumsDF.columns = headerNames
-    analyseMeDF.to_csv('outTest.csv',index=False,sep=',')
+    analyseMeDF.to_csv('outActual.csv',index=False,sep=',')
     expectedNumsDF.to_csv('outExpected.csv',index=False,sep=',')
 
     
-    return out_data
+    return ServoOutData
 
-def Write_Doc(record_array, out_data):
+def Write_Doc(record_array, out_data,move_list):
     if record_array[0] == True:
-        with open(record_array[-1], 'w', newline='') as csvfile:
-            DocWriter = csv.writer(csvfile, delimiter=',',quoting=csv.QUOTE_MINIMAL)    
-            header_line = []
-            if record_array[1] == True:
-                header_line.append("Position")
-            if record_array[2] == True:
-                header_line.append("Speed")
-            if record_array[3] == True:
-                header_line.append("Time")
-            if record_array[4] == True:
-                header_line.append("Position Index")
-            if record_array[5] == True:
-                header_line.append("Stride Count")
-            if record_array[6] == True:
-                header_line.append("Current")
-            if record_array[7] == True:
-                header_line.append("Voltage")
-            if record_array[8] == True:
-                header_line.append("Temperature")
-            DocWriter.writerow(header_line)
-            for each_line in out_data:
-                DocWriter.writerow(each_line)
+        header_line = ["Target Position"]
+        if record_array[1] == True:
+            header_line.append("Actual Position")
+        if record_array[2] == True:
+            header_line.append("Speed")
+        if record_array[3] == True:
+            header_line.append("Time")
+        if record_array[4] == True:
+            header_line.append("Position Index")
+        if record_array[5] == True:
+            header_line.append("Stride Count")
+        if record_array[6] == True:
+            header_line.append("Current")
+        if record_array[7] == True:
+            header_line.append("Voltage")
+        if record_array[8] == True:
+            header_line.append("Temperature")
+        for i in range(len(move_list)):
+            with open((record_array[-1] + '_s' + i + '.csv'), 'w', newline='') as csvfile:
+                DocWriter = csv.writer(csvfile, delimiter=',',quoting=csv.QUOTE_MINIMAL)    
+                DocWriter.writerow(header_line)
+                for each_line in out_data[i]:
+                    DocWriter.writerow(each_line)
         print("Data Finished Recording.")
     else:
         print("Data Not Recorded.")
@@ -4996,23 +5040,29 @@ def Write_Settings_Doc(Config_Dictionary,filename_for_save):
         yaml.dump(Config_Dictionary, file)
 
 def CleanUp(ServosDictionary,port_hand_list):
-    for each_servo in ServosDictionary.values():
-        if (each_servo.port_used == 0):
-            each_servo.ToggleTorque(0,port_hand_list[0])
-        elif (each_servo.port_used == 1):
-            each_servo.ToggleTorque(0,port_hand_list[1])
-        elif (each_servo.port_used == 2):
-            each_servo.ToggleTorque(0,port_hand_list[2])
-        elif (each_servo.port_used == 3):
-            each_servo.ToggleTorque(0,port_hand_list[3])
-        elif (each_servo.port_used == 4):
-            each_servo.ToggleTorque(0,port_hand_list[4])
-        elif (each_servo.port_used == 5):
-            each_servo.ToggleTorque(0,port_hand_list[5])
-        each_servo.__del__()
-    for each_port_obj in port_hand_list:
-        if each_port_obj != 0:
-            each_port_obj.closePort()
+    try:
+        for each_servo in ServosDictionary.values():
+            if (each_servo.port_used == 0):
+                each_servo.ToggleTorque(0,port_hand_list[0])
+            elif (each_servo.port_used == 1):
+                each_servo.ToggleTorque(0,port_hand_list[1])
+            elif (each_servo.port_used == 2):
+                each_servo.ToggleTorque(0,port_hand_list[2])
+            elif (each_servo.port_used == 3):
+                each_servo.ToggleTorque(0,port_hand_list[3])
+            elif (each_servo.port_used == 4):
+                each_servo.ToggleTorque(0,port_hand_list[4])
+            elif (each_servo.port_used == 5):
+                each_servo.ToggleTorque(0,port_hand_list[5])
+            each_servo.__del__()
+    except:
+        pass
+    try:
+        for each_port_obj in port_hand_list:
+            if each_port_obj != 0:
+                each_port_obj.closePort()
+    except:
+        pass
 
 def Reset_For_Run(ServosDictionary,port_hand_list):
     for each_servo in ServosDictionary.values():

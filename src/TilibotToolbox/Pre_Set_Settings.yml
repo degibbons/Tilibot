@@ -3,14 +3,14 @@
 
 #
 Baud-Rate: 1000000 # Dynamixel default baudrate is 57,600                                           #0
-Position-Angle-File: /home/pi/TilibotToolbox/ref_data/Kinematics_5.csv                              #1
+Position-Angle-File: ../../ref_data/Kinematics_5.csv #1
 Positions-Per-Stride: 22 # Amount of positions limbs will hit before completing a single stride     #2
 Stride-Time: 10.0 # in seconds, Float                                                               #3
 Stride-Amount: 2 # Entire strides to execute before finishing movement                              #4
 ##
 
 #
-Servos-Connected:                                                                                   #5
+Servos-Connected: #5
   - Yes # Servo #1
   - Yes # Servo #2
   - Yes # Servo #3
@@ -35,7 +35,7 @@ Servos-Connected:                                                               
   - Yes # Servo #22
   - Yes # Servo #23
   - Yes # Servo #24
-Limbs-Connected:                                                                                    #6
+Limbs-Connected: #6
   - Yes # Front Right Limb
   - Yes # Front Left Limb
   - Yes # Back Right Limb
@@ -43,48 +43,51 @@ Limbs-Connected:                                                                
   - No # Neck Limb
   - Yes # Spine Limb
   - Yes # Tail Limb
-Body-Sensors-Connected: No                                                                            #7
+Body-Sensors-Connected: No #7
 ##
 
 # Stance / Swing Ratios
-Forelimb-Stance: 5.211718                                                                            #8
-Forelimb-Swing: 3.028282                                                                             #9
-Hindlimb-Stance: 4.892994                                                                           #10
-Hindlimb-Swing: 3.347006                                                                            #11
-Ratio-Time: 8.24                                                                                    #12
+Forelimb-Stance: 5.211718 #8
+Forelimb-Swing: 3.028282 #9
+Hindlimb-Stance: 4.892994 #10
+Hindlimb-Swing: 3.347006 #11
+Ratio-Time: 8.24 #12
 ##
 
 # Pick Only One of the Following Options
-Move-Single-Servo: No                                                                               #13
+Move-Single-Servo: No #13
 Single-Servo-To-Move: 0 # Put 0 if Move Single Servo is "no"                                        #14
-Move-Multiple-Servos: Yes                                                                            #15
-Servos-To-Move: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16] # Leave list empty [] if Move Multiple Servos is "no" #16
+Move-Multiple-Servos: Yes #15
+Servos-To-Move: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] # Leave list empty [] if Move Multiple Servos is "no" #16
 ##
 
 #
-Home-Speed: 50                                                                                      #17
-Output-File-Name: TestOutFile                                                                       #18
-Output-File-Directory: /home/pi/TilibotToolbox/out_data/                                            #19
+Home-Speed: 50 #17
+Output-File-Name: TestOutFile #18
+Output-File-Directory: ../../out_data/ #19
 ##
 
-# Output Information (Check all that apply) 
-Position: No                                                                                       #20
-Speed: No                                                                                          #21
-Time: No                                                                                            #22
-Position-Index: No                                                                                  #23
-Stride-Count: No                                                                                    #24
-Current: No                                                                                         #25
-Voltage: No                                                                                         #26
-Temperature: No                                                                                     #27
+# Output Information (Check all that apply)
+Position: No #20
+Speed: No #21
+Time: No #22
+Position-Index: No #23
+Stride-Count: No #24
+Current: No #25
+Voltage: No #26
+Temperature: No #27
 ##
 
 # Pre-Run Behaviors
-Neck-Straight: True                                                                                 #28
-Spine-Straight: True                                                                                #29
-Tail-Straight: True                                                                                 #30
+Neck-Straight: True #28
+Spine-Straight: True #29
+Tail-Straight: True #30
 ##
 
-#
-Silence-Extraneous-Output: No                                                                       #31  
-Run-Digital-Only: No          # Not Fully set up yet, in Test phase                                 #32  
+# Experimental Features
+Silence-Extraneous-Output: No #31
+Run-Digital-Only: No # Not Fully set up yet, in Test phase                                 #32
 ##
+
+Pin-Accuracy: 24 # Amount of pins to either side of desired end location establishing threshold for movement #33
+Speed-Range-Shortening: 5 # Amount of speeds removed from either end of the 1-1024 speed range      #34
